@@ -1,0 +1,10 @@
+.data/
+.env*
+!.env.example
+.git/
+.next/
+.vercel/
+node_modules/
+test-results/
+playwright-report/
+*.tsbuildinfo
