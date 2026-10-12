@@ -9,6 +9,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { Modal, Field, Button, Spinner } from "./ui";
+import ProjectEvidence from "./project-evidence";
 import { uid, safeUrl } from "@/lib/types";
 import type { Project, Workspace } from "@/lib/types";
 import {
@@ -36,7 +37,7 @@ export default function ProjectForm({
 }: {
   project: Project | null;
   profile: Workspace["profile"];
-  onSave: (project: Project) => Promise<void>;
+  onSave: (project: Project, keepOpen?: boolean) => Promise<void>;
   onClose: () => void;
   beforeGenerate: () => Promise<void>;
   hasConsent: () => boolean;
@@ -62,6 +63,9 @@ export default function ProjectForm({
         privateNote: "",
       },
   );
+  const [persisted, setPersisted] = useState(!!project);
+  const [evidenceBusy, setEvidenceBusy] = useState(false);
+  const evidenceSection = useRef<HTMLDivElement>(null);
   const [tagsText, setTagsText] = useState(project?.tags.join(", ") || "");
   const [about, setAbout] = useState(
     [project?.title, project?.problem]
@@ -96,7 +100,7 @@ export default function ProjectForm({
   const review = useRef<HTMLElement>(null);
   useEffect(() => () => controller.current?.abort(), []);
   const technical = /개발|데이터|연구|엔지니어/.test(profile.role);
-  const busy = generating || saving;
+  const busy = generating || saving || evidenceBusy;
   const answerSummary = [
     { label: "경험 유형", value: editor.category },
     { label: "경험 설명", value: about },
@@ -742,14 +746,33 @@ export default function ProjectForm({
             e.preventDefault();
             setSaving(true);
             setError("");
+            const keepOpen =
+              (e.nativeEvent as SubmitEvent).submitter?.getAttribute(
+                "value",
+              ) === "evidence";
             try {
-              await onSave({
-                ...editor,
-                tags: tagsText
-                  .split(",")
-                  .map((t) => t.trim())
-                  .filter(Boolean),
-              });
+              await onSave(
+                {
+                  ...editor,
+                  tags: tagsText
+                    .split(",")
+                    .map((t) => t.trim())
+                    .filter(Boolean),
+                },
+                keepOpen,
+              );
+              if (keepOpen) {
+                setPersisted(true);
+                setMessage(
+                  "경험을 저장했어요. 이제 증빙 자료를 첨부해 주세요.",
+                );
+                requestAnimationFrame(() =>
+                  evidenceSection.current?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center",
+                  }),
+                );
+              }
             } catch (e) {
               setError((e as Error).message);
             } finally {
@@ -919,16 +942,35 @@ export default function ProjectForm({
               disabled={saving}
             />
           </Field>
+          <div ref={evidenceSection}>
+            <ProjectEvidence
+              projectId={editor.id}
+              saved={persisted}
+              disabled={saving}
+              onBusyChange={setEvidenceBusy}
+            />
+          </div>
           <div className="modal-actions">
             <Button
               type="button"
               variant="secondary"
-              disabled={saving}
+              disabled={busy}
               onClick={onClose}
             >
               취소
             </Button>
-            <Button type="submit" disabled={saving}>
+            {!persisted && (
+              <Button
+                type="submit"
+                name="intent"
+                value="evidence"
+                variant="secondary"
+                disabled={busy}
+              >
+                저장하고 증빙 첨부
+              </Button>
+            )}
+            <Button type="submit" disabled={busy}>
               {saving ? <Spinner /> : <Save size={16} />}경험 저장
             </Button>
           </div>

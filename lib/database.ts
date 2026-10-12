@@ -5,6 +5,9 @@ import { createClient, type Client } from "@libsql/client/http";
 
 const schema = [
   "CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT UNIQUE, password TEXT, state TEXT NOT NULL, revision INTEGER NOT NULL DEFAULT 0)",
+  "CREATE TABLE IF NOT EXISTS project_evidence (id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,project_id TEXT NOT NULL,name TEXT NOT NULL,mime TEXT NOT NULL,size INTEGER NOT NULL,created_at TEXT NOT NULL,content TEXT NOT NULL)",
+  "CREATE INDEX IF NOT EXISTS project_evidence_owner_project ON project_evidence(user_id,project_id)",
+  "CREATE TRIGGER IF NOT EXISTS project_evidence_cleanup AFTER UPDATE OF state ON users BEGIN DELETE FROM project_evidence WHERE user_id=NEW.id AND NOT EXISTS (SELECT 1 FROM json_each(NEW.state,'$.projects') p WHERE json_extract(p.value,'$.id')=project_evidence.project_id); END",
   "CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,expires INTEGER NOT NULL)",
   "CREATE TABLE IF NOT EXISTS publications (slug TEXT PRIMARY KEY,user_id TEXT UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,snapshot TEXT NOT NULL,updated_at TEXT NOT NULL)",
   "CREATE TABLE IF NOT EXISTS ai_usage (user_id TEXT NOT NULL,created_at INTEGER NOT NULL)",

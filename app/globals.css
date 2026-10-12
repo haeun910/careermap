@@ -4981,3 +4981,37 @@ small {
     font-size: 20px;
   }
 }
+
+.project-evidence { margin-top: 24px; padding: 22px; border: 1px solid var(--border, #dfe7e1); border-radius: 16px; background: #f7faf8; }
+.evidence-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.evidence-heading h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 7px; font-size: 16px; }
+.evidence-heading p, .evidence-note, .evidence-upload p { font-size: 12px; line-height: 1.7; color: #68756e; margin: 0; }
+.evidence-private { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; font-size: 11px; color: #386d56; background: #e6f0e9; border-radius: 20px; padding: 5px 8px; }
+.evidence-note { margin: 10px 0 16px; }
+.evidence-upload { display: flex; gap: 14px; align-items: flex-start; padding: 18px; background: #fff; border: 1px dashed #b7cbbc; border-radius: 12px; }
+.evidence-upload > svg { color: #458469; margin-top: 3px; flex-shrink: 0; }
+.evidence-upload > div { min-width: 0; width: 100%; }
+.evidence-upload label { font-size: 13px; font-weight: 600; }
+.evidence-upload input[type=file] { display: block; max-width: 100%; margin-top: 10px; padding: 0; border: 0; background: transparent; font-size: 12px; }
+.evidence-upload input::file-selector-button { border: 1px solid #cbd9cf; border-radius: 7px; padding: 8px 12px; color: #315c47; background: #f4f8f5; margin-right: 8px; cursor: pointer; }
+.evidence-capacity { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 5px; font-size: 11px; color: #758278; margin: 10px 0; }
+.evidence-empty { color: #738077; font-size: 12px; line-height: 1.7; padding: 14px 0; }
+.evidence-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.evidence-list > li { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; background: white; border: 1px solid #e3eae5; border-radius: 10px; padding: 10px; }
+.evidence-thumbnail, .evidence-file-icon { width: 52px; height: 52px; flex-shrink: 0; display: grid; place-items: center; background: #edf3ef; border: 0; border-radius: 7px; color: #59816a; padding: 0; overflow: hidden; }
+.evidence-thumbnail { cursor: zoom-in; }
+.evidence-thumbnail img { width: 100%; height: 100%; object-fit: cover; }
+.evidence-file-info { min-width: 0; flex: 1; display: grid; gap: 5px; }
+.evidence-file-info strong { font-size: 12px; overflow-wrap: anywhere; }
+.evidence-file-info small { font-size: 11px; color: #7c877f; }
+.evidence-file-actions { display: flex; gap: 2px; }
+.evidence-file-actions a { text-decoration: none; }
+.evidence-delete-confirm { flex-basis: 100%; background: #fff7f5; border-radius: 8px; padding: 12px; font-size: 12px; }
+.evidence-delete-confirm p { margin: 0 0 10px; }
+.evidence-delete-confirm button { margin-right: 6px; }
+.evidence-preview { margin-top: 14px; padding: 12px; border: 1px solid #dae5dc; border-radius: 10px; background: white; }
+.evidence-preview > div { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 12px; overflow-wrap: anywhere; }
+.evidence-preview img { display: block; max-width: 100%; max-height: 440px; object-fit: contain; margin: 10px auto 0; }
+.evidence-progress, .evidence-success { font-size: 12px; overflow-wrap: anywhere; color: #35664d; }
+.evidence-progress { display: flex; align-items: center; gap: 8px; }
+@media (max-width: 600px) { .project-evidence { padding: 14px; } .evidence-heading { flex-wrap: wrap; } .evidence-upload { padding: 12px; gap: 9px; } .evidence-list > li { gap: 8px; } .evidence-file-actions .icon-btn { width: 30px; height: 30px; } }

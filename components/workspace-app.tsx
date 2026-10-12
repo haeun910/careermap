@@ -1842,7 +1842,7 @@ export default function WorkspaceApp() {
                 "먼저 저장 오류를 해결해 주세요. " + saveErrorRef.current,
               );
           }}
-          onSave={async (p) => {
+          onSave={async (p, keepOpen) => {
             await mutate((w) => ({
               ...w,
               projects: w.projects.some((x) => x.id === p.id)
@@ -1850,7 +1850,7 @@ export default function WorkspaceApp() {
                 : [...w.projects, p],
             }));
             notify("경험을 저장했습니다. 연결된 서류와 공개본은 유지됩니다.");
-            close();
+            if (!keepOpen) close();
           }}
         />
       )}
