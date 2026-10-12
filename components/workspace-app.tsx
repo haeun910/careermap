@@ -49,6 +49,7 @@ import {
   Link as LinkIcon,
   ShieldCheck,
   Loader2,
+  BookOpen,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import {
@@ -62,6 +63,10 @@ import {
   TextLink,
 } from "./ui";
 import PortfolioView from "./portfolio-view";
+import PreparationGuide from "./preparation-guide";
+import SelfReflectionPanel from "./self-reflection";
+import { emptyReflection, reflectionSignature } from "@/lib/reflection";
+import { copyDocumentToSpace, copyQuestionToSpace } from "@/lib/master";
 import { portfolioSnapshot } from "@/lib/portfolio";
 import { emptyWorkspace } from "@/lib/seed";
 import { uid, stages, progress, safeUrl } from "@/lib/types";
@@ -78,6 +83,7 @@ import type {
 } from "@/lib/types";
 const menus: { id: View; name: string; icon: typeof Compass }[] = [
   { id: "dashboard", name: "대시보드", icon: LayoutDashboard },
+  { id: "guide", name: "준비 가이드", icon: BookOpen },
   { id: "self", name: "자기분석", icon: ScanFace },
   { id: "projects", name: "프로젝트 · 경험", icon: FolderKanban },
   { id: "companies", name: "희망기업", icon: Building2 },
@@ -325,23 +331,27 @@ export default function WorkspaceApp() {
     go("companies");
   }
   function newDocument(jobId: string, kind: Document["kind"]) {
-    if (!jobId) {
-      notify("희망기업에 공고를 먼저 등록해 주세요.");
-      go("companies");
-      return;
-    }
     const doc: Document = {
       id: uid(),
       jobId,
       kind,
-      title: `${s.companies.find((c) => c.id === s.jobs.find((j) => j.id === jobId)?.companyId)?.name || ""} ${kind}`,
+      title:
+        (jobId
+          ? s.companies.find(
+              (c) => c.id === s.jobs.find((j) => j.id === jobId)?.companyId,
+            )?.name || ""
+          : "마스터") +
+        " " +
+        kind,
       question:
         kind === "자기소개서"
           ? "지원동기와 직무 관련 경험을 작성해 주세요."
           : "",
       limit: kind === "자기소개서" ? 700 : 0,
       text: "",
-      projectIds: [...(s.jobs.find((j) => j.id === jobId)?.projectIds || [])],
+      projectIds: jobId
+        ? [...(s.jobs.find((j) => j.id === jobId)?.projectIds || [])]
+        : s.projects.map((p) => p.id),
       versions: [],
     };
     mutate((w) => ({ ...w, documents: [...w.documents, doc] }));
@@ -506,6 +516,16 @@ export default function WorkspaceApp() {
           </div>
         </header>
         <main className={`main-content view-${view}`}>
+          {view === "guide" && (
+            <PreparationGuide
+              state={s}
+              isSample={isSample}
+              guest={data.guest}
+              onNavigate={go}
+              onProfile={() => setModal("profile")}
+              onStart={() => setModal("onboard")}
+            />
+          )}
           {view === "dashboard" && (
             <>
               <div className="page-heading">
@@ -535,6 +555,17 @@ export default function WorkspaceApp() {
                   </button>
                 </div>
               )}
+              <section className="guide-entry">
+                <BookOpen size={22} />
+                <div>
+                  <strong>어디서부터 시작할지 막막한가요?</strong>
+                  <p>공고 없이도 시작하는 7단계 준비 가이드를 만나보세요.</p>
+                </div>
+                <Button variant="secondary" onClick={() => go("guide")}>
+                  처음 시작하는 준비 가이드
+                  <ArrowRight size={15} />
+                </Button>
+              </section>
               <section className="hero-card">
                 <div className="hero-copy">
                   <span className="hero-label">
@@ -1029,6 +1060,57 @@ export default function WorkspaceApp() {
                 eyebrow="KNOW YOURSELF"
                 title="나를 이해하는 첫걸음"
                 description="경험에서 강점을 발견하고, 다음 목표를 구체적으로 만들어 보세요."
+              />
+              <SelfReflectionPanel
+                value={s.reflection}
+                role={s.profile.role}
+                aiBusy={aiBusy}
+                onChange={(fn) => {
+                  mutate((w) => ({
+                    ...w,
+                    reflection: fn(w.reflection || emptyReflection()),
+                  })).catch(() => {});
+                }}
+                onAI={() => {
+                  const source = reflectionSignature(
+                    current().reflection || emptyReflection(),
+                  );
+                  runAI(
+                    "reflection",
+                    undefined,
+                    undefined,
+                    undefined,
+                    (text) => {
+                      if (
+                        source !==
+                        reflectionSignature(
+                          current().reflection || emptyReflection(),
+                        )
+                      ) {
+                        notify(
+                          "답변이 달라졌어요. 현재 답변으로 다시 정리해 주세요.",
+                        );
+                        return;
+                      }
+                      mutate((w) => ({
+                        ...w,
+                        reflection: {
+                          ...(w.reflection || emptyReflection()),
+                          analysis: {
+                            text,
+                            source,
+                            date: new Date().toISOString(),
+                          },
+                        },
+                      }))
+                        .then(() => {
+                          notify("AI 자기성찰을 저장했습니다.");
+                          close();
+                        })
+                        .catch(() => {});
+                    },
+                  );
+                }}
               />
               <div className="two-col">
                 <section className="panel profile-panel">
@@ -1632,32 +1714,19 @@ export default function WorkspaceApp() {
             <>
               <PageHeading
                 eyebrow="YOUR STORY, WELL TOLD"
-                title="기업마다, 나다운 지원 서류"
-                description="같은 경험도 다른 강조점으로. 작업본과 제출본을 분리해 관리해요."
+                title="마스터부터 기업별 지원 서류까지"
+                description="공고 없이 공통 원본을 만들고, 기업이 정해지면 복사해 다듬어요."
               />
-              {s.jobs.length ? (
-                <DocumentWorkspace
-                  state={s}
-                  activeId={activeDoc}
-                  onSelect={setActiveDoc}
-                  onCreate={newDocument}
-                  mutate={mutate}
-                  notify={notify}
-                  runAI={runAI}
-                  close={close}
-                />
-              ) : (
-                <Empty
-                  icon={<FileText size={30} />}
-                  title="서류를 연결할 공고가 필요해요"
-                  description="희망기업에서 공고를 등록하고 지원 서류를 만들어 보세요."
-                  action={
-                    <Button onClick={() => go("companies")}>
-                      희망기업으로 가기
-                    </Button>
-                  }
-                />
-              )}
+              <DocumentWorkspace
+                state={s}
+                activeId={activeDoc}
+                onSelect={setActiveDoc}
+                onCreate={newDocument}
+                mutate={mutate}
+                notify={notify}
+                runAI={runAI}
+                close={close}
+              />
             </>
           )}
           {view === "interview" && (
@@ -1667,28 +1736,15 @@ export default function WorkspaceApp() {
                 title="나의 이야기를 자신 있게"
                 description="예상 질문과 답변을 준비하고, 실제 경험을 근거로 연습해요."
               />
-              {s.jobs.length ? (
-                <InterviewWorkspace
-                  onAddJob={() => go("companies")}
-                  state={s}
-                  initialJob={activeJob}
-                  mutate={mutate}
-                  runAI={runAI}
-                  notify={notify}
-                  close={close}
-                />
-              ) : (
-                <Empty
-                  icon={<MessageSquare size={30} />}
-                  title="첫 면접을 함께 준비해요"
-                  description="공고를 등록하면 경험과 서류에 맞는 예상 질문을 준비할 수 있어요."
-                  action={
-                    <Button onClick={() => go("companies")}>
-                      공고 등록하기
-                    </Button>
-                  }
-                />
-              )}
+              <InterviewWorkspace
+                onAddJob={() => go("companies")}
+                state={s}
+                initialJob={activeJob}
+                mutate={mutate}
+                runAI={runAI}
+                notify={notify}
+                close={close}
+              />
             </>
           )}
           {view === "portfolio" && (
@@ -2086,8 +2142,9 @@ export default function WorkspaceApp() {
         >
           <p className="body-copy">
             준비 유형과 목표 직무, 선택한 경험, 기업·공고 자료 및 해당 작업의
-            서류·답변을 AI 서비스에 전달합니다. 이름과 이메일, 비공개 메모는
-            기본 자료에서 제외합니다.
+            서류·답변을 AI 서비스에 전달합니다. 자기점검 AI 정리에는 선택한 질문
+            답변과 이유도 포함됩니다. 이름과 이메일, 비공개 메모는 기본 자료에서
+            제외합니다.
           </p>
           <p className="helper-text">
             본문에 직접 적은 개인정보는 함께 전송될 수 있어요. 민감한 내용은
@@ -2126,7 +2183,7 @@ export default function WorkspaceApp() {
                 <Sparkles size={30} />
               </span>
               <h3>나의 이야기를 연결하고 있어요</h3>
-              <p>등록한 경험과 공고를 살펴보고 있습니다.</p>
+              <p>이번 작업에 필요한 경험이나 답변을 살펴보고 있습니다.</p>
               <Spinner />
             </div>
           ) : (
@@ -2765,6 +2822,55 @@ function AuthForm({
     </Modal>
   );
 }
+function CopyDestination({
+  state: s,
+  sourceJobId,
+  onCopy,
+}: {
+  state: Workspace;
+  sourceJobId: string;
+  onCopy: (jobId: string) => void;
+}) {
+  const [target, setTarget] = useState("__select");
+  const destinations = s.jobs.filter((j) => j.id !== sourceJobId);
+  if (!sourceJobId && !destinations.length)
+    return (
+      <p className="master-hint">
+        공고를 등록하면 원본을 유지한 채 기업별로 복사할 수 있어요.
+      </p>
+    );
+  return (
+    <div className="material-copy">
+      <label>
+        <span>복사할 보관함</span>
+        <select
+          aria-label="복사할 보관함"
+          value={target}
+          onChange={(e) => setTarget(e.target.value)}
+        >
+          <option value="__select">복사할 곳 선택</option>
+          {sourceJobId && <option value="">마스터 · 공통 보관함</option>}
+          {destinations.map((j) => (
+            <option key={j.id} value={j.id}>
+              {s.companies.find((c) => c.id === j.companyId)?.name} · {j.title}
+            </option>
+          ))}
+        </select>
+      </label>
+      <Button
+        variant="secondary"
+        disabled={target === "__select"}
+        onClick={() => {
+          onCopy(target);
+          setTarget("__select");
+        }}
+      >
+        <Copy size={14} />
+        독립된 복사본 만들기
+      </Button>
+    </div>
+  );
+}
 function DocumentWorkspace({
   state: s,
   activeId,
@@ -2785,7 +2891,7 @@ function DocumentWorkspace({
   close: () => void;
 }) {
   const doc = s.documents.find((d) => d.id === activeId);
-  const [jobId, setJobId] = useState(doc?.jobId || s.jobs[0]?.id || "");
+  const [jobId, setJobId] = useState(doc?.jobId ?? "");
   useEffect(() => {
     if (doc) setJobId(doc.jobId);
   }, [doc?.id, doc?.jobId]);
@@ -2801,6 +2907,7 @@ function DocumentWorkspace({
               onSelect("");
             }}
           >
+            <option value="">마스터 보관함 · 공고 없이 준비</option>
             {s.jobs.map((j) => (
               <option key={j.id} value={j.id}>
                 {s.companies.find((c) => c.id === j.companyId)?.name} ·{" "}
@@ -2852,14 +2959,14 @@ function DocumentWorkspace({
               </button>
             ))}
           {!s.documents.some((d) => d.jobId === jobId) && (
-            <p className="helper-text">이 공고의 첫 문서를 추가해 보세요.</p>
+            <p className="helper-text">이 보관함의 첫 문서를 추가해 보세요.</p>
           )}
         </div>
         <div className="note-box">
           <History size={18} />
           <p>
-            기업별 문서는 독립적으로 저장됩니다. 제출본은 이후 수정으로 바뀌지
-            않아요.
+            마스터와 기업별 복사본은 독립적으로 저장됩니다. 제출본은 이후
+            수정으로 바뀌지 않아요.
           </p>
         </div>
       </aside>
@@ -2876,7 +2983,7 @@ function DocumentWorkspace({
                         s.jobs.find((j) => j.id === doc.jobId)?.companyId,
                     )?.name
                   }{" "}
-                  / {doc.kind}
+                  {!doc.jobId && "마스터 보관함"} / {doc.kind}
                 </span>
                 <h2>{doc.title}</h2>
               </div>
@@ -2885,6 +2992,28 @@ function DocumentWorkspace({
                 수정 이력 {doc.versions.length}
               </Button>
             </div>
+            {doc.submitted && (
+              <CopyDestination
+                key={"copy-" + doc.id}
+                state={s}
+                sourceJobId={doc.jobId}
+                onCopy={(target) => {
+                  const copy = copyDocumentToSpace(s, doc, target);
+                  mutate((w) => ({ ...w, documents: [...w.documents, copy] }))
+                    .then(() => {
+                      onSelect(copy.id);
+                      notify("원본을 유지하고 독립된 서류로 복사했습니다.");
+                    })
+                    .catch(() => {});
+                }}
+              />
+            )}
+            {!doc.jobId && (
+              <p className="master-hint">
+                공통 원본입니다. 기업이 정해지면 복사본을 다듬고 제출본을
+                확정하세요.
+              </p>
+            )}
             {doc.submitted ? (
               <>
                 <div className="submitted-note">
@@ -2942,6 +3071,8 @@ function DocumentWorkspace({
               <DocumentEditor
                 key={doc.id}
                 doc={doc}
+                state={s}
+                onCopySelect={onSelect}
                 projects={s.projects}
                 mutate={mutate}
                 notify={notify}
@@ -3007,7 +3138,7 @@ function DocumentWorkspace({
           <Empty
             icon={<NotebookPen size={35} />}
             title="나의 이야기를 준비할 시간"
-            description="공고를 선택하고 이력서나 자기소개서를 추가해 주세요."
+            description="마스터 보관함에서 공고 없이 이력서·자소서를 만들 수 있어요. 기업이 정해지면 복사해 다듬으세요."
           />
         )}
       </section>
@@ -3016,6 +3147,8 @@ function DocumentWorkspace({
 }
 function DocumentEditor({
   doc,
+  state: s,
+  onCopySelect,
   projects,
   mutate,
   notify,
@@ -3023,6 +3156,8 @@ function DocumentEditor({
   close,
 }: {
   doc: Document;
+  state: Workspace;
+  onCopySelect: (id: string) => void;
   projects: Project[];
   mutate: Mutate;
   notify: (s: string) => void;
@@ -3075,6 +3210,24 @@ function DocumentEditor({
   }
   return (
     <>
+      <CopyDestination
+        state={s}
+        sourceJobId={doc.jobId}
+        onCopy={async (target) => {
+          try {
+            await save(false);
+            let copyId = "";
+            await mutate((w) => {
+              const source = w.documents.find((d) => d.id === doc.id)!;
+              const copy = copyDocumentToSpace(w, source, target);
+              copyId = copy.id;
+              return { ...w, documents: [...w.documents, copy] };
+            });
+            onCopySelect(copyId);
+            notify("현재 원본을 저장하고 독립된 서류로 복사했습니다.");
+          } catch {}
+        }}
+      />
       <div className="editor-fields">
         {doc.kind === "자기소개서" && (
           <>
@@ -3209,7 +3362,11 @@ function DocumentEditor({
             작업본 저장
           </Button>
           <Button
-            disabled={!text.trim() || Boolean(limit && text.length > limit)}
+            disabled={
+              !doc.jobId ||
+              !text.trim() ||
+              Boolean(limit && text.length > limit)
+            }
             onClick={() => setConfirm(true)}
           >
             <ShieldCheck size={16} />
@@ -3292,7 +3449,7 @@ function InterviewWorkspace({
   onAddJob: () => void;
 }) {
   const [jobId, setJobId] = useState(
-    s.jobs.some((j) => j.id === initialJob) ? initialJob : s.jobs[0]?.id || "",
+    s.jobs.some((j) => j.id === initialJob) ? initialJob : "",
   );
   const [tab, setTab] = useState<"answers" | "practice" | "history">("answers");
   const [question, setQuestion] = useState(
@@ -3302,24 +3459,17 @@ function InterviewWorkspace({
   const [feedback, setFeedback] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const questions = s.questions.filter((q) => q.jobId === jobId);
-  if (!s.jobs.length)
-    return (
-      <section className="panel">
-        <Empty
-          icon={<MessageSquare size={30} />}
-          title="지원할 공고부터 준비해요"
-          description="희망기업에 공고를 등록하면, 그 직무에 맞춰 면접 답변과 연습을 모을 수 있어요."
-          action={
-            <Button onClick={onAddJob}>
-              <Plus size={15} />
-              희망기업 · 공고 등록
-            </Button>
-          }
-        />
-      </section>
-    );
   return (
     <>
+      {!jobId && (
+        <div className="master-intro">
+          <Compass size={19} />
+          <p>
+            공고가 없어도 자기소개·강점·협업 경험 답변을 준비할 수 있어요.
+            기업이 정해지면 원본을 남기고 해당 공간으로 복사하세요.
+          </p>
+        </div>
+      )}
       <div className="interview-top panel">
         <Field label="준비할 지원 공간">
           <select
@@ -3329,6 +3479,7 @@ function InterviewWorkspace({
               setFeedback("");
             }}
           >
+            <option value="">공통 답변 보관함 · 공고 없이 준비</option>
             {s.jobs.map((j) => (
               <option key={j.id} value={j.id}>
                 {s.companies.find((c) => c.id === j.companyId)?.name} ·{" "}
@@ -3409,6 +3560,7 @@ function InterviewWorkspace({
             <AnswerCard
               key={q.id}
               question={q}
+              state={s}
               mutate={mutate}
               notify={notify}
               onPractice={() => {
@@ -3605,11 +3757,13 @@ function InterviewWorkspace({
 }
 function AnswerCard({
   question: q,
+  state: s,
   mutate,
   notify,
   onPractice,
 }: {
   question: Question;
+  state: Workspace;
   mutate: Mutate;
   notify: (s: string) => void;
   onPractice: () => void;
@@ -3651,6 +3805,24 @@ function AnswerCard({
           <ArrowRight size={15} />
         </Button>
       </div>
+      <CopyDestination
+        state={s}
+        sourceJobId={q.jobId}
+        onCopy={(target) => {
+          const copy = copyQuestionToSpace(s, { ...q, answer }, target);
+          mutate((w) => ({
+            ...w,
+            questions: [
+              ...w.questions.map((x) => (x.id === q.id ? { ...x, answer } : x)),
+              copy,
+            ],
+          }))
+            .then(() =>
+              notify("현재 답변을 저장하고 독립된 답변으로 복사했습니다."),
+            )
+            .catch(() => {});
+        }}
+      />
     </section>
   );
 }

@@ -1,12 +1,14 @@
 import { NextRequest } from "next/server";
 import { authenticated, error, sameOrigin, sessionResponse } from "@/lib/http";
 import { checkAiLimit } from "@/lib/store";
+import { answeredCount } from "@/lib/reflection";
 import { aiContext, generate } from "@/lib/ai";
 import type { AiTask, Workspace } from "@/lib/types";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 const tasks = [
   "self",
+  "reflection",
   "company",
   "match",
   "resume",
@@ -29,11 +31,10 @@ export async function POST(req: NextRequest) {
       (b.question || "").length > 2000
     )
       return error("입력 형식을 확인해 주세요.");
-    if (!(await checkAiLimit(u.id)))
-      return error("요청이 많습니다. 잠시 쉬었다가 다시 시도해 주세요.", 429);
     const s = JSON.parse(u.state) as Workspace;
     if (
-      ["company", "match", "questions", "feedback"].includes(b.task) &&
+      (["company", "match"].includes(b.task) ||
+        (["questions", "feedback"].includes(b.task) && b.targetId)) &&
       !s.jobs.some((j) => j.id === b.targetId)
     )
       return error("공고를 먼저 선택해 주세요.");
@@ -47,6 +48,18 @@ export async function POST(req: NextRequest) {
       !s.projects.length
     )
       return error("실제 경험을 먼저 정리해 주세요.");
+    if (
+      b.task === "reflection" &&
+      answeredCount(s.reflection?.answers || {}) < 4
+    )
+      return error("질문에 4개 이상 답한 뒤 AI 정리를 시작해 주세요.");
+    if (
+      b.task === "feedback" &&
+      (!(b.answer || "").trim() || !(b.question || "").trim())
+    )
+      return error("질문과 답변을 먼저 입력해 주세요.");
+    if (!(await checkAiLimit(u.id)))
+      return error("요청이 많습니다. 잠시 쉬었다가 다시 시도해 주세요.", 429);
     return sessionResponse(
       await generate(
         b.task as AiTask,

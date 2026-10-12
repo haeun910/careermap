@@ -307,3 +307,50 @@ test("Vercel cannot silently fall back to temporary SQLite storage", async () =>
     process.env.CAREERMAP_DATABASE_PROVIDER = previousProvider;
   }
 });
+
+test("master materials and self-reflection survive API save/reload without any jobs", async () => {
+  const a = await guest();
+  a.data.state.jobs = [];
+  a.data.state.companies = [];
+  a.data.state.tasks = [];
+  a.data.state.documents = [
+    {
+      id: "master-api",
+      jobId: "",
+      kind: "이력서",
+      title: "마스터 이력서",
+      question: "",
+      limit: 0,
+      text: "공통 경험",
+      projectIds: [],
+      versions: [],
+    },
+  ];
+  a.data.state.questions = [
+    {
+      id: "common-question",
+      jobId: "",
+      question: "자기소개",
+      answer: "공통 답변",
+      sourceDocumentId: "",
+    },
+  ];
+  a.data.state.reflection = {
+    version: 1,
+    answers: { c1: 5, c2: 1, s1: "a" },
+    notes: { s1: "먼저 기준 확인" },
+    updatedAt: new Date().toISOString(),
+    history: [],
+  };
+  assert.equal(
+    (await workspace.PUT(request("/api/workspace", "PUT", a.data, a.cookie)))
+      .status,
+    200,
+  );
+  const loaded = await (
+    await workspace.GET(request("/api/workspace", "GET", undefined, a.cookie))
+  ).json();
+  assert.equal(loaded.state.reflection.notes.s1, "먼저 기준 확인");
+  assert.equal(loaded.state.documents[0].jobId, "");
+  assert.equal(loaded.state.questions[0].answer, "공통 답변");
+});

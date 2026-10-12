@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { Workspace } from "./types";
+import { validReflectionAnswer, situationQuestions } from "./reflection";
 const text = z.string().max(16000),
   short = z.string().max(200),
   id = z.string().min(1).max(100),
@@ -42,6 +43,46 @@ const job = z
     matchAnalysis: text.optional(),
   })
   .strict();
+const reflectionAnswers = z
+  .record(z.string().max(100), z.union([z.number().int(), z.string().max(100)]))
+  .refine(
+    (a) =>
+      Object.entries(a).every(([id, value]) =>
+        validReflectionAnswer(id, value),
+      ),
+    "질문과 답변을 확인해 주세요.",
+  );
+const reflectionNotes = z
+  .record(z.string().max(100), z.string().max(600))
+  .refine(
+    (n) =>
+      Object.keys(n).every((id) => situationQuestions.some((q) => q.id === id)),
+    "상황 질문을 확인해 주세요.",
+  );
+const reflection = z
+  .object({
+    version: z.literal(1),
+    answers: reflectionAnswers,
+    notes: reflectionNotes,
+    updatedAt: short,
+    history: z
+      .array(
+        z
+          .object({
+            id,
+            date: short,
+            answers: reflectionAnswers,
+            notes: reflectionNotes,
+          })
+          .strict(),
+      )
+      .max(10),
+    analysis: z
+      .object({ text, source: z.string().max(10000), date: short })
+      .strict()
+      .optional(),
+  })
+  .strict();
 export const workspaceSchema = z
   .object({
     profile: z
@@ -75,7 +116,7 @@ export const workspaceSchema = z
         z
           .object({
             id,
-            jobId: id,
+            jobId: z.union([id, z.literal("")]),
             kind: z.enum(["이력서", "자기소개서", "경력기술서"]),
             title: short,
             question: text,
@@ -117,7 +158,7 @@ export const workspaceSchema = z
         z
           .object({
             id,
-            jobId: id,
+            jobId: z.union([id, z.literal("")]),
             question: text,
             answer: text,
             sourceDocumentId: short,
@@ -130,7 +171,7 @@ export const workspaceSchema = z
         z
           .object({
             id,
-            jobId: id,
+            jobId: z.union([id, z.literal("")]),
             date: short,
             question: text,
             answer: text,
@@ -140,6 +181,7 @@ export const workspaceSchema = z
       )
       .max(100),
     selfAnalysis: text,
+    reflection: reflection.optional(),
     portfolio: z
       .object({
         title: short,
@@ -176,11 +218,21 @@ export function validateRelationships(s: Workspace) {
       (x) => c.has(x.companyId) && x.projectIds.every((i) => p.has(i)),
     ) &&
     s.documents.every(
-      (x) => j.has(x.jobId) && x.projectIds.every((i) => p.has(i)),
+      (x) =>
+        (!x.jobId || j.has(x.jobId)) &&
+        (!x.submitted || Boolean(x.jobId)) &&
+        x.projectIds.every((i) => p.has(i)),
     ) &&
     s.tasks.every((x) => !x.jobId || j.has(x.jobId)) &&
-    s.questions.every((x) => j.has(x.jobId)) &&
-    s.practices.every((x) => j.has(x.jobId)) &&
+    s.questions.every(
+      (x) =>
+        (!x.jobId || j.has(x.jobId)) &&
+        (!x.sourceDocumentId ||
+          s.documents.some(
+            (d) => d.id === x.sourceDocumentId && d.jobId === x.jobId,
+          )),
+    ) &&
+    s.practices.every((x) => !x.jobId || j.has(x.jobId)) &&
     s.portfolio.projectIds.every((i) => p.has(i))
   );
 }

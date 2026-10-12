@@ -1,5 +1,6 @@
 export type View =
   | "dashboard"
+  | "guide"
   | "self"
   | "projects"
   | "companies"
@@ -110,7 +111,22 @@ export interface Workspace {
   questions: Question[];
   practices: Practice[];
   selfAnalysis: string;
+  reflection?: SelfReflection;
   portfolio: Portfolio;
+}
+export interface ReflectionAnswers {
+  answers: Record<string, number | string>;
+  notes: Record<string, string>;
+}
+export interface ReflectionSnapshot extends ReflectionAnswers {
+  id: string;
+  date: string;
+}
+export interface SelfReflection extends ReflectionAnswers {
+  version: 1;
+  updatedAt: string;
+  history: ReflectionSnapshot[];
+  analysis?: { text: string; source: string; date: string };
 }
 export interface Publication {
   slug: string;
@@ -123,7 +139,14 @@ export interface WorkspaceResponse {
   publication: Publication | null;
 }
 export type AiTask =
-  "self" | "company" | "match" | "resume" | "cover" | "questions" | "feedback";
+  | "self"
+  | "reflection"
+  | "company"
+  | "match"
+  | "resume"
+  | "cover"
+  | "questions"
+  | "feedback";
 export const uid = () => crypto.randomUUID();
 export const stages: Stage[] = [
   "관심",
