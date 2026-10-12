@@ -67,8 +67,20 @@ import PortfolioView from "./portfolio-view";
 import PreparationGuide from "./preparation-guide";
 import ProjectForm from "./project-form";
 import { AnnouncementBoard, AnnouncementAdministration } from "./announcements";
-import SelfReflectionPanel from "./self-reflection";
-import { emptyReflection, reflectionSignature } from "@/lib/reflection";
+import Link from "next/link";
+import ResumeBuilder from "./resume-builder";
+import ResumeSheet from "./resume-sheet";
+import CoverBuilder from "./cover-builder";
+import {
+  emptyResume,
+  formatResume,
+  formatCover,
+  legacyPrompts,
+  coverReady,
+  type ResumeData,
+  type CoverPrompt,
+} from "@/lib/document-builder";
+import { answeredCount } from "@/lib/reflection";
 import { copyDocumentToSpace, copyQuestionToSpace } from "@/lib/master";
 import { portfolioSnapshot } from "@/lib/portfolio";
 import { emptyWorkspace } from "@/lib/seed";
@@ -248,10 +260,11 @@ export default function WorkspaceApp() {
     answer?: string,
     question?: string,
     onApply?: (text: string) => void,
+    options?: { promptId?: string },
   ) {
     if (!aiConsent.current) {
       pendingAi.current = () =>
-        runAI(task, targetId, answer, question, onApply);
+        runAI(task, targetId, answer, question, onApply, options);
       setModal("aiConsent");
       return;
     }
@@ -260,7 +273,11 @@ export default function WorkspaceApp() {
     setAiResult("");
     setAiLimit(
       task === "cover"
-        ? current().documents.find((d) => d.id === targetId)?.limit || 0
+        ? (current()
+            .documents.find((d) => d.id === targetId)
+            ?.prompts?.find((p) => p.id === options?.promptId)?.limit ??
+            current().documents.find((d) => d.id === targetId)?.limit) ||
+            0
         : 0,
     );
     setModal("ai");
@@ -276,6 +293,7 @@ export default function WorkspaceApp() {
         targetId,
         answer,
         question,
+        ...options,
       });
       setAiResult(r.text);
       if (onApply) setAiAction(() => () => onApply(r.text));
@@ -351,11 +369,11 @@ export default function WorkspaceApp() {
           : "마스터") +
         " " +
         kind,
-      question:
-        kind === "자기소개서"
-          ? "지원동기와 직무 관련 경험을 작성해 주세요."
-          : "",
-      limit: kind === "자기소개서" ? 700 : 0,
+      question: "",
+      limit: 0,
+      ...(kind === "자기소개서"
+        ? { prompts: [] }
+        : { resume: emptyResume(s.profile) }),
       text: "",
       projectIds: jobId
         ? [...(s.jobs.find((j) => j.id === jobId)?.projectIds || [])]
@@ -1090,57 +1108,33 @@ export default function WorkspaceApp() {
                 title="나를 이해하는 첫걸음"
                 description="경험에서 강점을 발견하고, 다음 목표를 구체적으로 만들어 보세요."
               />
-              <SelfReflectionPanel
-                value={s.reflection}
-                role={s.profile.role}
-                aiBusy={aiBusy}
-                onChange={(fn) => {
-                  mutate((w) => ({
-                    ...w,
-                    reflection: fn(w.reflection || emptyReflection()),
-                  })).catch(() => {});
-                }}
-                onAI={() => {
-                  const source = reflectionSignature(
-                    current().reflection || emptyReflection(),
-                  );
-                  runAI(
-                    "reflection",
-                    undefined,
-                    undefined,
-                    undefined,
-                    (text) => {
-                      if (
-                        source !==
-                        reflectionSignature(
-                          current().reflection || emptyReflection(),
-                        )
-                      ) {
-                        notify(
-                          "답변이 달라졌어요. 현재 답변으로 다시 정리해 주세요.",
-                        );
-                        return;
-                      }
-                      mutate((w) => ({
-                        ...w,
-                        reflection: {
-                          ...(w.reflection || emptyReflection()),
-                          analysis: {
-                            text,
-                            source,
-                            date: new Date().toISOString(),
-                          },
-                        },
-                      }))
-                        .then(() => {
-                          notify("AI 자기성찰을 저장했습니다.");
-                          close();
-                        })
-                        .catch(() => {});
-                    },
-                  );
-                }}
-              />
+              <section className="panel assessment-entry">
+                <span className="eyebrow">나를 알아가는 준비</span>
+                <h2>성향을 살펴보고, 경험에서 강점을 찾아요</h2>
+                <p>
+                  컬처핏·잡핏·회사 상황 22문항을 메뉴 없는 전용 화면에서 차분히
+                  답해요. 끝나면 실제 경험과 함께 역량 어필 전략을 준비할 수
+                  있어요.
+                </p>
+                <div className="assessment-entry-actions">
+                  <Link className="btn btn-primary" href="/assessment">
+                    {answeredCount(s.reflection?.answers || {}) === 22
+                      ? "검사 결과·어필 전략 보기"
+                      : answeredCount(s.reflection?.answers || {})
+                        ? "검사 이어하기"
+                        : "집중해서 자기점검 시작"}
+                    <ArrowRight size={16} />
+                  </Link>
+                  <span>
+                    {answeredCount(s.reflection?.answers || {})} / 22문항 · 약
+                    8~12분
+                  </span>
+                </div>
+                <small>
+                  선호와 실제 역량을 구분해 돌아보는 질문입니다. 답변과 분석은
+                  공개되지 않아요.
+                </small>
+              </section>
               <div className="two-col">
                 <section className="panel profile-panel">
                   <SectionTitle
@@ -2333,6 +2327,7 @@ type RunAI = (
   answer?: string,
   question?: string,
   onApply?: (text: string) => void,
+  options?: { promptId?: string },
 ) => Promise<void>;
 function CompanyForm({
   company,
@@ -2927,8 +2922,14 @@ function DocumentWorkspace({
                   </Button>
                 </div>
                 <article className="print-sheet">
-                  <h1>{doc.title}</h1>
-                  <pre>{doc.submitted.text}</pre>
+                  {doc.submitted.resume ? (
+                    <ResumeSheet value={doc.submitted.resume} />
+                  ) : (
+                    <>
+                      <h1>{doc.title}</h1>
+                      <pre>{doc.submitted.text}</pre>
+                    </>
+                  )}
                 </article>
               </>
             ) : (
@@ -2970,6 +2971,8 @@ function DocumentWorkspace({
                                     ? {
                                         ...d,
                                         text: v.text,
+                                        resume: undefined,
+                                        prompts: undefined,
                                         versions: [
                                           ...d.versions,
                                           {
@@ -3039,22 +3042,69 @@ function DocumentEditor({
     setLimit(doc.limit);
     setSelected(doc.projectIds);
   }, [doc.text, doc.question, doc.limit, doc.projectIds]);
+  const [resume, setResume] = useState<ResumeData>(
+    () => doc.resume || emptyResume(s.profile),
+  );
+  const [prompts, setPrompts] = useState<CoverPrompt[]>(() =>
+    doc.kind === "자기소개서" ? legacyPrompts(doc) : [],
+  );
+  const [structured, setStructured] = useState(
+    !!doc.resume || doc.kind === "자기소개서" || !doc.text,
+  );
+  const [builderError, setBuilderError] = useState("");
+  useEffect(() => {
+    setResume(doc.resume || emptyResume(s.profile));
+    setPrompts(doc.kind === "자기소개서" ? legacyPrompts(doc) : []);
+    setStructured(!!doc.resume || doc.kind === "자기소개서" || !doc.text);
+  }, [doc.resume, doc.prompts]);
   const changed =
+    JSON.stringify(resume) !==
+      JSON.stringify(doc.resume || emptyResume(s.profile)) ||
+    JSON.stringify(prompts) !== JSON.stringify(doc.prompts || []) ||
     text !== doc.text ||
     question !== doc.question ||
     limit !== doc.limit ||
     selected.join() !== doc.projectIds.join();
   async function save(notice = true) {
+    const output =
+      doc.kind === "자기소개서"
+        ? formatCover(prompts)
+        : structured
+          ? formatResume(resume)
+          : text;
+    if (output.length > 16000) {
+      setBuilderError(
+        "문서 전체는 16,000자까지 저장할 수 있어요. 항목별 내용을 간결하게 줄여 주세요.",
+      );
+      throw new Error("문서 전체가 너무 깁니다.");
+    }
+    setBuilderError("");
     await mutate((w) => ({
       ...w,
       documents: w.documents.map((d) =>
         d.id === doc.id
           ? {
               ...d,
-              text,
-              question,
-              limit,
-              projectIds: selected,
+              text:
+                doc.kind === "자기소개서"
+                  ? formatCover(prompts)
+                  : structured
+                    ? formatResume(resume)
+                    : text,
+              question:
+                doc.kind === "자기소개서"
+                  ? prompts[0]?.question || ""
+                  : question,
+              limit: doc.kind === "자기소개서" ? 0 : limit,
+              projectIds:
+                doc.kind === "자기소개서"
+                  ? [...new Set(prompts.flatMap((p) => p.projectIds))]
+                  : selected,
+              ...(doc.kind === "자기소개서"
+                ? { prompts }
+                : structured
+                  ? { resume }
+                  : {}),
               versions:
                 text !== d.text
                   ? [
@@ -3092,115 +3142,147 @@ function DocumentEditor({
           } catch {}
         }}
       />
-      <div className="editor-fields">
-        {doc.kind === "자기소개서" && (
-          <>
-            <Field label="실제 문항 또는 연습 문항">
-              <textarea
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                rows={2}
-              />
-            </Field>
-            <Field label="글자수 제한 (0 = 제한 없음)">
-              <input
-                type="number"
-                min={0}
-                max={10000}
-                value={limit}
-                onChange={(e) => setLimit(Number(e.target.value))}
-              />
-            </Field>
-          </>
-        )}
-        <Field label="활용할 프로젝트 · 경험">
-          <div className="experience-chips">
-            {projects.map((p) => (
-              <label
-                className={selected.includes(p.id) ? "selected" : ""}
-                key={p.id}
-              >
-                <input
-                  type="checkbox"
-                  checked={selected.includes(p.id)}
-                  onChange={(e) =>
-                    setSelected((ids) =>
-                      e.target.checked
-                        ? [...ids, p.id]
-                        : ids.filter((x) => x !== p.id),
-                    )
-                  }
-                />
-                <span>
-                  {selected.includes(p.id) && <Check size={12} />} {p.title}
-                </span>
-              </label>
-            ))}
-          </div>
-        </Field>
-        <div className="editor-toolbar">
-          <span>{changed ? "저장하지 않은 변경 사항" : "저장된 작업본"}</span>
+      {builderError && (
+        <p className="form-error" role="alert">
+          {builderError}
+        </p>
+      )}
+      <div className="editor-toolbar">
+        <span>{changed ? "저장하지 않은 변경 사항" : "저장된 작업본"}</span>
+      </div>
+      {doc.kind === "자기소개서" ? (
+        <CoverBuilder
+          value={prompts}
+          projects={projects}
+          onChange={(next) => {
+            setPrompts(next);
+            setText(formatCover(next));
+          }}
+          onAI={async (promptId) => {
+            setBuilderError("");
+            try {
+              await save(false);
+              await runAI(
+                "cover",
+                doc.id,
+                undefined,
+                undefined,
+                (result) => {
+                  mutate((w) => ({
+                    ...w,
+                    documents: w.documents.map((d) => {
+                      if (d.id !== doc.id) return d;
+                      const next = (d.prompts || []).map((p) =>
+                        p.id === promptId ? { ...p, answer: result } : p,
+                      );
+                      return {
+                        ...d,
+                        prompts: next,
+                        text: formatCover(next),
+                        versions: [
+                          ...d.versions,
+                          {
+                            id: uid(),
+                            text: d.text,
+                            date: new Date().toISOString(),
+                          },
+                        ].slice(-30),
+                      };
+                    }),
+                  }))
+                    .then(() => {
+                      notify(
+                        "선택한 문항의 초안을 저장했습니다. 다른 문항은 그대로 남습니다.",
+                      );
+                      close();
+                    })
+                    .catch((e) => setBuilderError(e.message));
+                },
+                { promptId },
+              );
+            } catch (e) {
+              setBuilderError((e as Error).message);
+            }
+          }}
+        />
+      ) : structured ? (
+        <ResumeBuilder
+          value={resume}
+          projects={projects}
+          careerDocument={doc.kind === "경력기술서"}
+          onChange={(next) => {
+            setResume(next);
+            setText(formatResume(next));
+            setSelected([
+              ...new Set(
+                next.experiences
+                  .map((e) => e.projectId)
+                  .filter((id): id is string => !!id),
+              ),
+            ]);
+          }}
+          onAI={async () => {
+            setBuilderError("");
+            try {
+              await save(false);
+              await runAI("resume", doc.id, undefined, undefined, (result) => {
+                mutate((w) => ({
+                  ...w,
+                  documents: w.documents.map((d) => {
+                    if (d.id !== doc.id || !d.resume) return d;
+                    const next = { ...d.resume, summary: result };
+                    return {
+                      ...d,
+                      resume: next,
+                      text: formatResume(next),
+                      versions: [
+                        ...d.versions,
+                        {
+                          id: uid(),
+                          text: d.text,
+                          date: new Date().toISOString(),
+                        },
+                      ].slice(-30),
+                    };
+                  }),
+                }))
+                  .then(() => {
+                    notify(
+                      "소개 문장을 저장했습니다. 학력·경력·연락처는 그대로 남습니다.",
+                    );
+                    close();
+                  })
+                  .catch((e) => setBuilderError(e.message));
+              });
+            } catch (e) {
+              setBuilderError((e as Error).message);
+            }
+          }}
+        />
+      ) : (
+        <section className="legacy-document">
+          <h3>기존 이력서 본문</h3>
+          <p>
+            이전에 작성한 내용은 보존했어요. 항목별 작성으로 전환하면 아래
+            본문이 수정 이력에 남고, 새 입력으로 완성본을 만들어요.
+          </p>
+          <textarea
+            aria-label="서류 본문"
+            rows={12}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+          />
           <Button
             variant="secondary"
-            onClick={async () => {
-              try {
-                await save(false);
-                await runAI(
-                  doc.kind === "자기소개서" ? "cover" : "resume",
-                  doc.id,
-                  undefined,
-                  undefined,
-                  (result) => {
-                    mutate((w) => ({
-                      ...w,
-                      documents: w.documents.map((d) =>
-                        d.id === doc.id
-                          ? {
-                              ...d,
-                              text: result,
-                              versions: [
-                                ...d.versions,
-                                {
-                                  id: uid(),
-                                  text: d.text,
-                                  date: new Date().toISOString(),
-                                },
-                              ].slice(-30),
-                            }
-                          : d,
-                      ),
-                    }));
-                    close();
-                  },
-                );
-              } catch {}
+            onClick={() => {
+              setStructured(true);
+              setText(formatResume(resume));
             }}
           >
-            <Sparkles size={15} />
-            경험 기반 AI 초안
+            항목별 이력서 작성으로 전환
           </Button>
-        </div>
-        <textarea
-          aria-label="서류 본문"
-          className="writing-area"
-          rows={16}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="내 경험을 나의 언어로 정리해 보세요. AI 초안은 검토 후 반영할 수 있습니다."
-        />
-        <div
-          className={`word-count ${limit && text.length > limit ? "over-limit" : ""}`}
-        >
-          <span>
-            공백 포함 {text.length}자 · 제외 {text.replace(/\s/g, "").length}자
-          </span>
-          {limit > 0 && (
-            <span>
-              제한 {limit}자 {text.length > limit ? "· 제한 초과" : ""}
-            </span>
-          )}
-        </div>
-      </div>
+        </section>
+      )}
       <div className="editor-footer">
         <div className="button-row">
           <Button
@@ -3221,7 +3303,10 @@ function DocumentEditor({
           </Button>
         </div>
         <div className="button-row">
-          <Button variant="secondary" onClick={() => save().catch(() => {})}>
+          <Button
+            variant="secondary"
+            onClick={() => save().catch((e) => setBuilderError(e.message))}
+          >
             <Save size={15} />
             작업본 저장
           </Button>
@@ -3229,7 +3314,15 @@ function DocumentEditor({
             disabled={
               !doc.jobId ||
               !text.trim() ||
-              Boolean(limit && text.length > limit)
+              (doc.kind === "자기소개서"
+                ? !coverReady(prompts)
+                : structured &&
+                  (!resume.name.trim() ||
+                    ![
+                      ...resume.education,
+                      ...resume.career,
+                      ...resume.experiences,
+                    ].some((e) => e.title.trim())))
             }
             onClick={() => setConfirm(true)}
           >
@@ -3239,9 +3332,14 @@ function DocumentEditor({
         </div>
       </div>
       <article className="print-sheet">
-        <h1>{doc.title}</h1>
-        {question && <h2>{question}</h2>}
-        <pre>{text}</pre>
+        {doc.kind !== "자기소개서" && structured ? (
+          <ResumeSheet value={resume} />
+        ) : (
+          <>
+            <h1>{doc.title}</h1>
+            <pre>{doc.kind === "자기소개서" ? formatCover(prompts) : text}</pre>
+          </>
+        )}
       </article>
       {confirm && (
         <Modal
@@ -3270,6 +3368,9 @@ function DocumentEditor({
                             submitted: {
                               text: d.text,
                               date: new Date().toISOString(),
+                              ...(d.resume
+                                ? { resume: structuredClone(d.resume) }
+                                : {}),
                               projectSnapshots: w.projects.filter((p) =>
                                 d.projectIds.includes(p.id),
                               ),

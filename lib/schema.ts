@@ -59,6 +59,41 @@ const reflectionNotes = z
       Object.keys(n).every((id) => situationQuestions.some((q) => q.id === id)),
     "상황 질문을 확인해 주세요.",
   );
+const resumeEntry = z
+  .object({
+    id,
+    projectId: id.optional(),
+    title: short,
+    detail: short,
+    period: short,
+    description: z.string().max(4000),
+  })
+  .strict();
+const resume = z
+  .object({
+    name: short,
+    email: z.string().max(320),
+    phone: short,
+    headline: short,
+    summary: z.string().max(2000),
+    skills: z.string().max(2000),
+    portfolio: url,
+    education: z.array(resumeEntry).max(10),
+    career: z.array(resumeEntry).max(15),
+    experiences: z.array(resumeEntry).max(15),
+    credentials: z.array(resumeEntry).max(15),
+  })
+  .strict();
+const coverPrompt = z
+  .object({
+    id,
+    question: z.string().max(2000),
+    limit: z.number().int().min(0).max(10000),
+    notes: z.string().max(4000),
+    answer: text,
+    projectIds: ids,
+  })
+  .strict();
 const reflection = z
   .object({
     version: z.literal(1),
@@ -78,7 +113,13 @@ const reflection = z
       )
       .max(10),
     analysis: z
-      .object({ text, source: z.string().max(10000), date: short })
+      .object({
+        text,
+        source: z.string().max(10000),
+        date: short,
+        projectIds: ids.optional(),
+        experienceSource: short.optional(),
+      })
       .strict()
       .optional(),
   })
@@ -123,6 +164,8 @@ export const workspaceSchema = z
             limit: z.number().int().min(0).max(10000),
             text,
             projectIds: ids,
+            resume: resume.optional(),
+            prompts: z.array(coverPrompt).max(10).optional(),
             versions: z
               .array(z.object({ id, text, date: short }).strict())
               .max(30),
@@ -130,6 +173,7 @@ export const workspaceSchema = z
               .object({
                 text,
                 date: short,
+                resume: resume.optional(),
                 projectSnapshots: z.array(project).max(100),
                 jobSnapshot: job,
               })
@@ -221,7 +265,16 @@ export function validateRelationships(s: Workspace) {
       (x) =>
         (!x.jobId || j.has(x.jobId)) &&
         (!x.submitted || Boolean(x.jobId)) &&
-        x.projectIds.every((i) => p.has(i)),
+        x.projectIds.every((i) => p.has(i)) &&
+        (!x.prompts ||
+          (x.kind === "자기소개서" &&
+            new Set(x.prompts.map((q) => q.id)).size === x.prompts.length &&
+            x.prompts.every((q) => q.projectIds.every((i) => p.has(i))))) &&
+        (!x.resume ||
+          (x.kind !== "자기소개서" &&
+            x.resume.experiences.every(
+              (e) => !e.projectId || p.has(e.projectId),
+            ))),
     ) &&
     s.tasks.every((x) => !x.jobId || j.has(x.jobId)) &&
     s.questions.every(

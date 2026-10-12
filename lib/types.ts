@@ -1,3 +1,4 @@
+import type { ResumeData, CoverPrompt } from "./document-builder";
 export type View =
   | "dashboard"
   | "guide"
@@ -10,7 +11,11 @@ export type View =
   | "interview"
   | "portfolio";
 export type Stage =
-  "관심" | "준비 중" | "지원 완료" | "면접 진행" | "결과 확정";
+  | "관심"
+  | "준비 중"
+  | "지원 완료"
+  | "면접 진행"
+  | "결과 확정";
 export interface Profile {
   name: string;
   type: string;
@@ -63,10 +68,13 @@ export interface Document {
   limit: number;
   text: string;
   projectIds: string[];
+  resume?: ResumeData;
+  prompts?: CoverPrompt[];
   versions: { id: string; text: string; date: string }[];
   submitted?: {
     text: string;
     date: string;
+    resume?: ResumeData;
     projectSnapshots: Project[];
     jobSnapshot: Job;
   };
@@ -128,7 +136,13 @@ export interface SelfReflection extends ReflectionAnswers {
   version: 1;
   updatedAt: string;
   history: ReflectionSnapshot[];
-  analysis?: { text: string; source: string; date: string };
+  analysis?: {
+    text: string;
+    source: string;
+    date: string;
+    projectIds?: string[];
+    experienceSource?: string;
+  };
 }
 export interface Publication {
   slug: string;

@@ -68,9 +68,13 @@ test("onboarding, project, application, submission and interview answers persist
   await page.getByRole("button", { name: "지원 서류", exact: true }).click();
   await page.getByRole("button", { name: "이력서 추가", exact: true }).click();
   await page
-    .getByLabel("서류 본문")
+    .getByLabel("짧은 소개")
     .fill("접근성 개선 프로젝트에서 키보드 탐색을 구현했습니다.");
-  await page.getByText("접근성 개선 프로젝트", { exact: true }).last().click();
+  await page.getByRole("button", { name: "3 역량·경험", exact: true }).click();
+  await page
+    .getByRole("button", { name: "접근성 개선 프로젝트", exact: true })
+    .click();
+  await page.getByRole("button", { name: "1 기본 정보", exact: true }).click();
   await page.getByRole("button", { name: "작업본 저장", exact: true }).click();
   await expect(page.getByText("저장된 작업본", { exact: true })).toBeVisible();
   await page.route("**/api/ai", (route) =>
@@ -80,7 +84,7 @@ test("onboarding, project, application, submission and interview answers persist
       body: JSON.stringify({ error: "무료 API를 잠시 사용할 수 없습니다." }),
     }),
   );
-  await page.getByRole("button", { name: "경험 기반 AI 초안" }).click();
+  await page.getByRole("button", { name: "경험으로 소개 문장 다듬기" }).click();
   await expect(
     page
       .getByRole("dialog")
@@ -93,7 +97,7 @@ test("onboarding, project, application, submission and interview answers persist
   await expect(page.getByRole("status")).toContainText(
     "무료 API를 잠시 사용할 수 없습니다.",
   );
-  await expect(page.getByLabel("서류 본문")).toHaveValue(
+  await expect(page.getByLabel("짧은 소개")).toHaveValue(
     "접근성 개선 프로젝트에서 키보드 탐색을 구현했습니다.",
   );
   await page.unroute("**/api/ai");

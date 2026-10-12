@@ -14,6 +14,11 @@ export function copyDocumentToSpace(
     jobId,
     title: (company?.name || "마스터") + " " + source.kind,
     text: source.submitted?.text ?? source.text,
+    resume: source.submitted?.resume
+      ? structuredClone(source.submitted.resume)
+      : source.resume
+        ? structuredClone(source.resume)
+        : undefined,
     submitted: undefined,
     versions: [],
   };

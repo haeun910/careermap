@@ -5015,3 +5015,120 @@ small {
 .evidence-progress, .evidence-success { font-size: 12px; overflow-wrap: anywhere; color: #35664d; }
 .evidence-progress { display: flex; align-items: center; gap: 8px; }
 @media (max-width: 600px) { .project-evidence { padding: 14px; } .evidence-heading { flex-wrap: wrap; } .evidence-upload { padding: 12px; gap: 9px; } .evidence-list > li { gap: 8px; } .evidence-file-actions .icon-btn { width: 30px; height: 30px; } }
+
+/* Choice controls must not inherit the full-width text-input styles. */
+.reflection-situation-choices input[type="radio"] { width: 16px; height: 16px; min-width: 16px; flex: 0 0 16px; padding: 0; margin: 4px 0 0; border: 0; }
+.reflection-situation-choices label > span { min-width: 0; flex: 1 1 0; text-align: left; word-break: keep-all; overflow-wrap: break-word; }
+.reflection-scale input[type="radio"] { width: 1px; min-width: 0; padding: 0; margin: 0; }
+.strategy-consent input[type="checkbox"], .strategy-selection .experience-chips input[type="checkbox"] { width: 16px; height: 16px; flex: 0 0 16px; padding: 0; margin: 3px 0 0; accent-color: var(--green); }
+.document-builder { padding: 20px 0; }
+.builder-intro h3 { font-size: 19px; margin-bottom: 6px; }
+.builder-intro p, .cover-add p { color: #74827c; font-size: 12px; line-height: 1.8; }
+.builder-steps { display: flex; gap: 8px; margin: 24px 0; border-bottom: 1px solid var(--line); padding-bottom: 16px; flex-wrap: wrap; }
+.builder-steps button { display: flex; align-items: center; gap: 7px; border: 0; border-radius: 8px; padding: 9px 11px; background: #f1f5f3; color: #6a7b72; font-size: 12px; }
+.builder-steps button[aria-current] { color: #305e49; background: #e3eee7; font-weight: 700; }
+.builder-steps button span { display: grid; place-items: center; border: 1px solid #c7d6cc; border-radius: 50%; width: 21px; height: 21px; font-size: 10px; }
+.builder-navigation { display: flex; justify-content: space-between; margin: 24px 0 10px; }
+.builder-section-heading,.builder-entry-title { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.resume-entry-group { margin: 22px 0; }
+.resume-entry { border: 1px solid #e3eae5; border-radius: 12px; padding: 18px; margin-top: 15px; background: #fafcfb; }
+.builder-entry-title { margin-bottom: 12px; font-size: 12px; }
+.resume-entry .form-row { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.resume-import { background: #f3f8f5; border-radius: 12px; padding: 18px; margin: 22px 0; }
+.resume-import .button-row { margin-top: 12px; flex-wrap: wrap; }
+.resume-preview { padding: 32px; border: 1px solid #dde6df; background: white; box-shadow: 0 7px 22px #223b4209; border-radius: 8px; }
+.resume-preview h3 { font-size: 27px; margin: 8px 0 15px; }
+.resume-preview pre { font: inherit; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.9; }
+.cover-question-nav { display: grid; gap: 8px; margin: 22px 0; }
+.cover-question-nav button { display: grid; grid-template-columns: 55px minmax(0,1fr) auto; align-items: start; gap: 10px; border: 1px solid #e0e9e2; padding: 12px 14px; border-radius: 9px; background: white; text-align: left; font-size: 12px; }
+.cover-question-nav button[aria-pressed="true"] { border-color: #61917b; background: #f0f7f3; }
+.cover-question-nav strong { font-weight: 500; word-break: keep-all; overflow-wrap: anywhere; }
+.cover-question-nav small { font-size: 10px; color: #78897f; }
+.cover-add { margin: 18px 0; padding: 18px; background: #f7f9f8; border-radius: 11px; }
+.cover-add .button-row { margin-top: 12px; flex-wrap: wrap; }
+.cover-add h4 { margin: 0 0 5px; font-size: 13px; }
+.cover-active-question { background: #eef5f0; border-radius: 10px; padding: 20px; margin-bottom: 18px; }
+.cover-active-question h3 { font-size: 16px; line-height: 1.8; word-break: keep-all; }
+.cover-active-question small { color: #6d8274; }
+.cover-writing-guide { margin-bottom: 20px; font-size: 12px; line-height: 1.9; }
+.cover-writing-guide p { color: #75867b; margin-top: 6px; }
+.cover-experience-reference { padding: 12px; border: 1px solid #e0e9e2; border-radius: 9px; margin: 8px 0; font-size: 12px; }
+.cover-experience-reference p { white-space: pre-wrap; margin: 8px 0; }
+.cover-experience-reference strong { display: block; color: #56735e; }
+.inline-confirm { margin: 12px 0; border-radius: 10px; padding: 14px; background: #fff5f2; }
+.inline-confirm p { margin-bottom: 12px; }
+.inline-confirm button { margin-right: 8px; }
+.legacy-document p { font-size: 12px; color: #79857f; margin: 10px 0; }
+.legacy-document textarea { margin-bottom: 15px; }
+.assessment-entry { margin-bottom: 25px; padding: 28px; }
+.assessment-entry h2 { font-size: 20px; margin: 8px 0; }
+.assessment-entry p { max-width: 760px; font-size: 13px; color: #738177; line-height: 1.9; }
+.assessment-entry-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 15px; margin: 22px 0 14px; }
+.assessment-entry-actions span,.assessment-entry small { color: #839087; font-size: 11px; }
+.assessment-screen { min-height: 100dvh; background: #f6f8f6; }
+.assessment-topbar { display: flex; align-items: center; justify-content: space-between; gap: 15px; max-width: 1160px; margin: auto; padding: 22px 30px; border-bottom: 1px solid #e3eae4; }
+.assessment-brand { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 600; color: #315c46; }
+.assessment-brand small { font-size: 10px; letter-spacing: 1px; color: #84978b; }
+.assessment-topbar > span[role=status] { color: #85938a; font-size: 11px; }
+.assessment-content { max-width: 860px; margin: 0 auto; padding: 45px 28px 70px; }
+.assessment-welcome h1 { font-size: 32px; margin: 13px 0 20px; line-height: 1.6; }
+.assessment-welcome > p { color: #76867c; font-size: 14px; line-height: 2; }
+.assessment-welcome-info { display: flex; gap: 12px; flex-wrap: wrap; margin: 20px 0 28px; font-size: 11px; color: #5b7d65; }
+.assessment-welcome-info span { background: #e9f1eb; border-radius: 20px; padding: 5px 11px; }
+.assessment-welcome > .btn { margin: 22px 0; }
+.assessment-screen .reflection-focused { border: 0; padding: 0; box-shadow: none; background: transparent; }
+.reflection-focused .reflection-progress { margin-bottom: 30px; }
+.reflection-focused .reflection-question { background: white; border-radius: 18px; padding: 34px; }
+.reflection-focused .reflection-question legend { font-size: 22px; line-height: 1.8; margin-bottom: 28px; outline: none; word-break: keep-all; overflow-wrap: break-word; }
+.reflection-focused .reflection-situation-choices label { font-size: 14px; line-height: 1.9; padding: 18px; }
+.reflection-focused .reflection-scale span { font-size: 13px; }
+.reflection-focused .reflection-bottom { color: #86978c; margin-top: 25px; }
+.strategy-panel { padding: 28px; margin-top: 32px; border: 1px solid #dce7de; border-radius: 15px; background: white; }
+.strategy-panel h2 { font-size: 21px; margin: 8px 0 20px; }
+.strategy-selection h3 { font-size: 16px; }
+.strategy-selection h3 small { font-size: 11px; color: #85958a; margin-left: 6px; }
+.strategy-selection p { font-size: 12px; color: #74867a; line-height: 1.9; margin: 8px 0 14px; }
+.strategy-selection .experience-chips { margin-bottom: 20px; }
+.strategy-consent { display: flex; gap: 12px; border-radius: 12px; padding: 18px; background: #eef4ef; margin: 22px 0; }
+.strategy-consent > svg { flex-shrink: 0; margin-top: 5px; color: #4f7c5c; }
+.strategy-consent p { margin: 0 0 12px; }
+.strategy-consent label { display: flex; gap: 8px; font-size: 12px; line-height: 1.8; cursor: pointer; }
+.strategy-consent label span { flex: 1; min-width: 0; }
+.assessment-next-actions { margin-top: 24px; }
+@media(max-width:650px) {
+ .resume-entry .form-row { grid-template-columns: 1fr; }
+ .builder-steps { gap: 5px; }
+ .builder-steps button { font-size: 11px; padding: 8px; }
+ .resume-preview { padding: 20px; }
+ .cover-question-nav button { grid-template-columns: 45px minmax(0,1fr); }
+ .cover-question-nav small { grid-column: 2; }
+ .assessment-topbar { padding: 15px; gap: 8px; flex-wrap: wrap; }
+ .assessment-topbar .btn { font-size: 11px; padding: 8px; }
+ .assessment-topbar > span[role=status] { font-size: 10px; }
+ .assessment-content { padding: 30px 16px 60px; }
+ .assessment-welcome h1 { font-size: 25px; }
+ .reflection-focused .reflection-question { padding: 22px 17px; }
+ .reflection-focused .reflection-question legend { font-size: 18px; }
+ .reflection-scale { grid-template-columns: 1fr; gap: 8px; }
+ .reflection-scale label { display: flex; align-items: center; gap: 14px; text-align: left; padding: 12px 16px; }
+ .reflection-scale strong { font-size: 17px; margin: 0; width: 24px; flex-shrink: 0; }
+ .reflection-scale span,.reflection-focused .reflection-scale span { font-size: 13px; }
+ .reflection-focused .reflection-situation-choices label { font-size: 13px; padding: 14px; }
+ .reflection-question-footer { flex-wrap: wrap; gap: 8px; }
+ .strategy-panel { padding: 20px; }
+ .strategy-panel h2 { font-size: 18px; }
+}
+.resume-sheet { color: #283832; background: white; line-height: 1.8; }
+.resume-sheet header { border-bottom: 2px solid #365c49; padding-bottom: 20px; margin-bottom: 25px; }
+.resume-sheet header h1 { font-size: 30px; margin: 0 0 6px; }
+.resume-sheet header > p { font-size: 14px; color: #496a57; }
+.resume-sheet-contact { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 14px; color: #78877e; font-size: 11px; overflow-wrap: anywhere; }
+.resume-sheet-section { margin: 24px 0; }
+.resume-sheet-section h2 { font-size: 14px; letter-spacing: 0; color: #315f47; border-bottom: 1px solid #e0e8e3; padding-bottom: 8px; margin-bottom: 12px; }
+.resume-sheet-section > p { font-size: 12px; }
+.resume-sheet-entry { margin: 17px 0; font-size: 12px; break-inside: avoid; }
+.resume-sheet-entry > div { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; }
+.resume-sheet-entry h3 { font-size: 13px; margin: 0; }
+.resume-sheet-entry > div span { color: #89948c; font-size: 11px; }
+.resume-sheet-detail { color: #65806e; margin: 4px 0 7px; }
+@media print { .document-builder,.editor-toolbar,.legacy-document,.material-copy,.master-hint,.form-error { display: none !important; } .resume-sheet-section h2 { margin: 15px 0 10px; } .print-sheet .resume-sheet header h1 { margin: 0 0 6px; font-size: 26px; } .print-sheet .resume-sheet-section h2 { margin: 15px 0 10px; font-size: 13px; } }

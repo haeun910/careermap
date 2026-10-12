@@ -52,7 +52,9 @@ const groq: AiProvider = {
               : { type: "json_object" },
           }
         : {}),
-      max_completion_tokens: task === "project" ? 3400 : 2200,
+      max_completion_tokens: ["project", "reflection"].includes(task)
+        ? 3400
+        : 2200,
       reasoning_effort: "low",
     });
     if (payload.length > 22000)

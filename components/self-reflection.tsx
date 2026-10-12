@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ArrowRight,
   ArrowLeft,
@@ -60,15 +60,26 @@ export default function SelfReflectionPanel({
   onAI,
   aiBusy,
   role,
+  focused = false,
+  onComplete,
+  onResultsChange,
 }: {
   value?: SelfReflection;
   onChange: (fn: (r: SelfReflection) => SelfReflection) => void;
   onAI: () => void;
   aiBusy: boolean;
   role: string;
+  focused?: boolean;
+  onComplete?: () => void;
+  onResultsChange?: (show: boolean) => void;
 }) {
   const r = value || emptyReflection();
-  const [section, setSection] = useState<ReflectionSection>("culture");
+  const [section, setSection] = useState<ReflectionSection>(() =>
+    focused
+      ? allReflectionQuestions.find((q) => r.answers[q.id] === undefined)
+          ?.section || "culture"
+      : "culture",
+  );
   const firstUnanswered = (part: ReflectionSection) =>
     Math.max(
       0,
@@ -76,14 +87,28 @@ export default function SelfReflectionPanel({
         .filter((q) => q.section === part)
         .findIndex((q) => r.answers[q.id] === undefined),
     );
-  const [index, setIndex] = useState(() => firstUnanswered("culture"));
-  const [results, setResults] = useState(false);
+  const [index, setIndex] = useState(() => firstUnanswered(section));
+  const [results, setResults] = useState(
+    () => answeredCount(r.answers) === allReflectionQuestions.length,
+  );
+  useEffect(() => {
+    onResultsChange?.(results);
+  }, [results, onResultsChange]);
   const [historyId, setHistoryId] = useState("");
   const [reset, setReset] = useState(false);
   const total = allReflectionQuestions.length;
   const count = answeredCount(r.answers);
   const questions = allReflectionQuestions.filter((q) => q.section === section);
   const q = questions[Math.min(index, questions.length - 1)];
+  const questionPanel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (focused && !results) {
+      window.scrollTo({ top: 0 });
+      questionPanel.current
+        ?.querySelector<HTMLElement>("legend")
+        ?.focus({ preventScroll: true });
+    }
+  }, [q.id, results, focused]);
   const stamp = () => new Date().toISOString();
   const updateAnswer = (value: string | number | undefined) =>
     onChange((prev) => {
@@ -112,25 +137,32 @@ export default function SelfReflectionPanel({
     else {
       setHistoryId("");
       setResults(true);
+      onComplete?.();
     }
   };
   return (
-    <section className="panel reflection-panel">
-      <div className="reflection-header">
-        <div>
-          <span className="eyebrow">WORK, IN YOUR OWN WAY</span>
-          <h2>내게 맞는 환경과 업무 찾기</h2>
-          <p>컬처핏·잡핏과 회사 상황 질문으로, 지금의 생각을 돌아봐요.</p>
-        </div>
-        <span className="label-pill">약 8~12분</span>
-      </div>
-      <div className="reflection-purpose">
-        <Compass size={18} />
-        <p>
-          정답 없이 선호를 살펴보는 자기점검입니다. 검증된 채용·심리검사나 특정
-          기업의 적합도 판정은 아니에요.
-        </p>
-      </div>
+    <section
+      className={`panel reflection-panel ${focused ? "reflection-focused" : ""}`}
+    >
+      {(!focused || results) && (
+        <>
+          <div className="reflection-header">
+            <div>
+              <span className="eyebrow">WORK, IN YOUR OWN WAY</span>
+              <h2>내게 맞는 환경과 업무 찾기</h2>
+              <p>컬처핏·잡핏과 회사 상황 질문으로, 지금의 생각을 돌아봐요.</p>
+            </div>
+            <span className="label-pill">약 8~12분</span>
+          </div>
+          <div className="reflection-purpose">
+            <Compass size={18} />
+            <p>
+              정답 없이 선호를 살펴보는 자기점검입니다. 검증된 채용·심리검사나
+              특정 기업의 적합도 판정은 아니에요.
+            </p>
+          </div>
+        </>
+      )}
       <div className="reflection-progress">
         <span>
           {count} / {total}문항 답변
@@ -146,31 +178,33 @@ export default function SelfReflectionPanel({
           <i style={{ width: (count / total) * 100 + "%" }} />
         </div>
       </div>
-      <div className="reflection-tabs" aria-label="자기점검 영역">
-        {reflectionSections.map((part) => (
+      {(!focused || results) && (
+        <div className="reflection-tabs" aria-label="자기점검 영역">
+          {reflectionSections.map((part) => (
+            <button
+              key={part.id}
+              aria-pressed={!results && section === part.id}
+              onClick={() => switchSection(part.id)}
+            >
+              <strong>{part.title}</strong>
+              <span>
+                {answeredCount(r.answers, part.id)} / {part.time}
+              </span>
+            </button>
+          ))}
           <button
-            key={part.id}
-            aria-pressed={!results && section === part.id}
-            onClick={() => switchSection(part.id)}
+            aria-pressed={results}
+            disabled={!count && !r.history.length}
+            onClick={() => {
+              setHistoryId(count ? "" : r.history.at(-1)?.id || "");
+              setResults(true);
+            }}
           >
-            <strong>{part.title}</strong>
-            <span>
-              {answeredCount(r.answers, part.id)} / {part.time}
-            </span>
+            <strong>답변 요약</strong>
+            <span>선호와 확인할 질문</span>
           </button>
-        ))}
-        <button
-          aria-pressed={results}
-          disabled={!count && !r.history.length}
-          onClick={() => {
-            setHistoryId(count ? "" : r.history.at(-1)?.id || "");
-            setResults(true);
-          }}
-        >
-          <strong>답변 요약</strong>
-          <span>선호와 확인할 질문</span>
-        </button>
-      </div>
+        </div>
+      )}
       {results ? (
         <div className="reflection-results">
           <div className="reflection-result-heading">
@@ -343,11 +377,11 @@ export default function SelfReflectionPanel({
             </Button>
             <Button
               variant="secondary"
-              disabled={aiBusy || count < 4 || !!historyId}
+              disabled={aiBusy || count !== total || !!historyId}
               onClick={onAI}
             >
               <Sparkles size={15} />
-              AI로 답변 함께 정리
+              성향·경험으로 역량 어필 전략 만들기
             </Button>
             <Button
               variant="ghost"
@@ -362,11 +396,11 @@ export default function SelfReflectionPanel({
           </div>
           <p className="helper-text">
             모두 답하면 최근 10회 점검 기록을 남기고 비교할 수 있어요. AI 정리는
-            4문항부터 가능하며, 직접 반영한 결과만 저장됩니다.
+            22문항을 모두 답한 뒤 선택한 경험과 함께 분석할 수 있어요.
           </p>
           {!historyId && r.analysis?.source === reflectionSignature(r) && (
             <section className="reflection-ai">
-              <h3>내가 반영한 AI 자기성찰</h3>
+              <h3>나의 역량 어필 전략</h3>
               <div className="markdown">
                 <ReactMarkdown>{r.analysis.text}</ReactMarkdown>
               </div>
@@ -387,7 +421,7 @@ export default function SelfReflectionPanel({
           </details>
         </div>
       ) : (
-        <div className="reflection-question">
+        <div className="reflection-question" ref={questionPanel}>
           <div className="reflection-question-meta">
             <span>
               {reflectionSections.find((p) => p.id === section)?.description}
@@ -397,7 +431,7 @@ export default function SelfReflectionPanel({
             </strong>
           </div>
           <fieldset>
-            <legend>
+            <legend tabIndex={-1}>
               {q.section === "situation" && (
                 <span className="reflection-situation-title">{q.title}</span>
               )}
@@ -461,8 +495,18 @@ export default function SelfReflectionPanel({
           <div className="reflection-question-footer">
             <Button
               variant="ghost"
-              disabled={index === 0}
-              onClick={() => setIndex(index - 1)}
+              disabled={index === 0 && section === "culture"}
+              onClick={() => {
+                if (index > 0) setIndex(index - 1);
+                else {
+                  const prev = section === "situation" ? "job" : "culture";
+                  setSection(prev);
+                  setIndex(
+                    allReflectionQuestions.filter((q) => q.section === prev)
+                      .length - 1,
+                  );
+                }
+              }}
             >
               <ArrowLeft size={15} />
               이전 질문
@@ -491,6 +535,17 @@ export default function SelfReflectionPanel({
           다음에 이어서 답해도 괜찮아요. 응답은 공개 포트폴리오에 포함되지
           않습니다.
         </span>
+        {focused && !results && r.history.length > 0 && (
+          <button
+            onClick={() => {
+              setHistoryId(r.history.at(-1)!.id);
+              setResults(true);
+            }}
+          >
+            <History size={13} />
+            이전 점검 기록 보기
+          </button>
+        )}
         <button onClick={() => setReset(true)}>
           <RotateCcw size={13} />
           현재 답변 초기화

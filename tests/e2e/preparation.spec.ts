@@ -28,6 +28,12 @@ test("guide and reflection retain answers and compare recorded responses after r
   await page
     .getByRole("button", { name: "자기분석 시작", exact: true })
     .click();
+  await page
+    .getByRole("link", { name: "집중해서 자기점검 시작", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "자기점검 시작", exact: true })
+    .click();
   const panel = page.locator(".reflection-panel");
   for (let i = 0; i < 16; i++) {
     await panel
@@ -58,15 +64,14 @@ test("guide and reflection retain answers and compare recorded responses after r
   await expect(
     panel.getByText("두 답변의 방향이 달라요.", { exact: false }).first(),
   ).toBeVisible();
-  await panel
-    .getByRole("button", { name: "점검 기록 남기기", exact: true })
-    .click();
+  await expect(
+    panel.getByRole("button", { name: "점검 기록 남기기", exact: true }),
+  ).toBeDisabled();
   await expect(
     panel.getByRole("combobox", { name: "점검 기록" }).locator("option"),
   ).toHaveCount(2);
-  await expect(page.getByText("저장됨", { exact: true })).toBeVisible();
+  await expect(page.getByText("답변 저장됨", { exact: true })).toBeVisible();
   await page.reload();
-  await nav(page, "자기분석").click();
   await expect(
     page.locator(".reflection-panel").getByRole("progressbar"),
   ).toHaveAttribute("aria-valuenow", "22");
@@ -80,7 +85,9 @@ test("guide and reflection retain answers and compare recorded responses after r
   await expect(
     page.locator(".reflection-panel").getByRole("progressbar"),
   ).toHaveAttribute("aria-valuenow", "0");
-  await page.getByRole("button", { name: "답변 요약", exact: false }).click();
+  await page
+    .getByRole("button", { name: "이전 점검 기록 보기", exact: true })
+    .click();
   await expect(
     page.getByRole("heading", { name: "이전 점검 기록", exact: true }),
   ).toBeVisible();
@@ -105,13 +112,16 @@ test("master documents and answers work without jobs and company copies stay ind
   await startEmpty(page);
   await nav(page, "이력서 · 자기소개서").click();
   await page.getByRole("button", { name: "이력서", exact: true }).click();
-  await page.getByLabel("서류 본문").fill("원본의 공통 경험");
+  await page.getByLabel("짧은 소개").fill("원본의 공통 경험");
   await page.getByRole("button", { name: "작업본 저장", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "제출본 확정", exact: true }),
   ).toBeDisabled();
   await page.getByRole("button", { name: "자소서", exact: true }).click();
-  await page.getByLabel("서류 본문").fill("공고 없이 준비한 자기소개");
+  await page.getByRole("button", { name: "직무 역량", exact: true }).click();
+  await page.getByRole("button", { name: "다음 단계", exact: true }).click();
+  await page.getByRole("button", { name: "다음 단계", exact: true }).click();
+  await page.getByLabel("문항 답변").fill("공고 없이 준비한 자기소개");
   await page.getByRole("button", { name: "작업본 저장", exact: true }).click();
   await nav(page, "면접 준비").click();
   await page.getByRole("button", { name: "질문 추가", exact: true }).click();
@@ -131,7 +141,7 @@ test("master documents and answers work without jobs and company copies stay ind
   await page.reload();
   await nav(page, "이력서 · 자기소개서").click();
   await page.getByRole("button", { name: /마스터 이력서/ }).click();
-  await expect(page.getByLabel("서류 본문")).toHaveValue("원본의 공통 경험");
+  await expect(page.getByLabel("짧은 소개")).toHaveValue("원본의 공통 경험");
   await nav(page, "희망기업").click();
   await page.getByRole("button", { name: "첫 기업 추가", exact: true }).click();
   await page
@@ -150,7 +160,7 @@ test("master documents and answers work without jobs and company copies stay ind
     .click();
   await nav(page, "이력서 · 자기소개서").click();
   await page.getByRole("button", { name: /마스터 이력서/ }).click();
-  await page.getByLabel("서류 본문").fill("복사 직전 수정한 공통 경험");
+  await page.getByLabel("짧은 소개").fill("복사 직전 수정한 공통 경험");
   await page
     .getByRole("combobox", { name: "복사할 보관함" })
     .selectOption({ label: "복사 테스트 기업 · 기획" });
@@ -160,16 +170,16 @@ test("master documents and answers work without jobs and company copies stay ind
   await expect(
     page.getByRole("heading", { name: "복사 테스트 기업 이력서", exact: true }),
   ).toBeVisible();
-  await expect(page.getByLabel("서류 본문")).toHaveValue(
+  await expect(page.getByLabel("짧은 소개")).toHaveValue(
     "복사 직전 수정한 공통 경험",
   );
-  await page.getByLabel("서류 본문").fill("기업에 맞게 수정한 경험");
+  await page.getByLabel("짧은 소개").fill("기업에 맞게 수정한 경험");
   await page.getByRole("button", { name: "작업본 저장", exact: true }).click();
   await page
     .getByRole("combobox", { name: "지원 공간", exact: true })
     .selectOption("");
   await page.getByRole("button", { name: /마스터 이력서/ }).click();
-  await expect(page.getByLabel("서류 본문")).toHaveValue(
+  await expect(page.getByLabel("짧은 소개")).toHaveValue(
     "복사 직전 수정한 공통 경험",
   );
   await nav(page, "면접 준비").click();
@@ -190,7 +200,7 @@ test("master documents and answers work without jobs and company copies stay ind
   expect(data.state.questions.filter((q: any) => q.jobId)).toHaveLength(1);
   expect(
     data.state.documents.find((d: any) => d.jobId && d.kind === "이력서").text,
-  ).toBe("기업에 맞게 수정한 경험");
+  ).toContain("기업에 맞게 수정한 경험");
   expect(renderErrors).toEqual([]);
 });
 
@@ -210,13 +220,19 @@ test("guide and self-reflection remain usable on a narrow screen", async ({
       ),
     ).toBe(true);
   }
+  await page
+    .getByRole("link", { name: "집중해서 자기점검 시작", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "자기점검 시작", exact: true })
+    .click();
   await page.getByRole("radio", { name: "매우 그래요", exact: true }).check();
   await page.getByRole("button", { name: "다음 질문", exact: true }).click();
   await page.getByRole("radio", { name: "전혀 아니에요", exact: true }).check();
-  await page.getByRole("button", { name: "답변 요약", exact: false }).click();
   await expect(
-    page.getByText("방법을 정하는 자율성", { exact: true }),
-  ).toBeVisible();
+    page.locator(".reflection-panel").getByRole("progressbar"),
+  ).toHaveAttribute("aria-valuenow", "2");
+  await expect(page.locator("aside.sidebar")).toHaveCount(0);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,

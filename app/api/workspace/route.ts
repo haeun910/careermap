@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { authenticated, error, sameOrigin, sessionResponse } from "@/lib/http";
 import { guestUser, saveWorkspace, userResponse } from "@/lib/store";
 import { workspaceSchema, validateRelationships } from "@/lib/schema";
+import { coverReady, formatCover, formatResume } from "@/lib/document-builder";
 import type { Workspace } from "@/lib/types";
 export const runtime = "nodejs";
 export async function GET(req: NextRequest) {
@@ -32,6 +33,32 @@ export async function PUT(req: NextRequest) {
     if (!validateRelationships(state))
       return error("연결된 프로젝트나 공고를 확인해 주세요.");
     const old = JSON.parse(user.state) as Workspace;
+    for (const doc of state.documents.filter(
+      (d) =>
+        d.submitted && !old.documents.find((x) => x.id === d.id)?.submitted,
+    )) {
+      if (
+        doc.prompts &&
+        (!coverReady(doc.prompts) ||
+          doc.submitted!.text !== formatCover(doc.prompts))
+      )
+        return error(
+          "모든 문항에 답하고 글자수 제한을 확인한 뒤 제출본을 확정해 주세요.",
+        );
+      if (
+        doc.resume &&
+        (doc.submitted!.text !== formatResume(doc.resume) ||
+          !doc.resume.name.trim() ||
+          ![
+            ...doc.resume.education,
+            ...doc.resume.career,
+            ...doc.resume.experiences,
+          ].some((e) => e.title.trim()))
+      )
+        return error(
+          "이력서의 이름과 학력·경력·경험을 확인한 뒤 제출본을 확정해 주세요.",
+        );
+    }
     for (const doc of old.documents.filter((d) => d.submitted)) {
       const updated = state.documents.find((d) => d.id === doc.id);
       if (
