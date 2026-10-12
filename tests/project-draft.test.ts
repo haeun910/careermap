@@ -51,54 +51,72 @@ test("one short description is enough; oversized and private input is rejected",
     !projectInputSchema.safeParse({ ...input, privateNote: "Do not transmit" })
       .success,
   );
-  const profile = {
-    ...emptyWorkspace().profile,
-    name: "Private person",
-    email: "private@example.invalid",
-  };
-  const context = projectDraftContext(profile, input);
+  const context = projectDraftContext(input);
   assert.ok(!JSON.stringify(context).includes("Private person"));
   assert.ok(!JSON.stringify(context).includes("private@example.invalid"));
-  assert.deepEqual(Object.keys(context), ["profile", "experience"]);
+  assert.deepEqual(Object.keys(context), ["experience"]);
 });
 test("drafts require actual cited answers and reject invented figures and unsafe structure", () => {
   const parsed = parseProjectDraft(JSON.stringify(result), input);
   assert.equal(parsed.draft.result, "");
   assert.deepEqual(parsed.draft.tags, ["React"]);
-  assert.throws(
-    () =>
-      parseProjectDraft(
-        JSON.stringify({
-          ...result,
-          sources: { ...result.sources, action: ["outcome"] },
-        }),
-        input,
-      ),
-    /근거/,
+  const badSource = parseProjectDraft(
+    JSON.stringify({
+      ...result,
+      sources: { ...result.sources, action: ["outcome"] },
+    }),
+    input,
   );
-  assert.throws(
-    () =>
-      parseProjectDraft(
-        JSON.stringify({
-          ...result,
-          sources: { ...result.sources, action: [] },
-        }),
-        input,
-      ),
-    /근거/,
+  assert.equal(badSource.draft.action, "");
+  assert.deepEqual(badSource.sources.action, []);
+  assert.equal(badSource.draft.title, result.draft.title);
+  assert.ok(badSource.questions.some((q) => q.field === "action"));
+  const unsupportedRole = parseProjectDraft(
+    JSON.stringify({
+      ...result,
+      draft: { ...result.draft, role: "프로덕트 디자이너" },
+      sources: {
+        ...result.sources,
+        role: [],
+        result: ["outcome"],
+        learning: ["additional"],
+      },
+    }),
+    input,
   );
-  assert.throws(
-    () =>
-      parseProjectDraft(
-        JSON.stringify({
-          ...result,
-          draft: { ...result.draft, result: "성과가 30% 개선됐습니다." },
-          sources: { ...result.sources, result: ["contribution"] },
-        }),
-        input,
-      ),
-    /수치/,
+  assert.equal(unsupportedRole.draft.role, "");
+  assert.deepEqual(unsupportedRole.sources.result, []);
+  assert.equal(unsupportedRole.draft.action, result.draft.action);
+  const inventedFigure = parseProjectDraft(
+    JSON.stringify({
+      ...result,
+      draft: { ...result.draft, result: "성과가 30% 개선됐습니다." },
+      sources: { ...result.sources, result: ["contribution"] },
+    }),
+    input,
   );
+  assert.equal(inventedFigure.draft.result, "");
+  assert.deepEqual(inventedFigure.sources.result, []);
+  assert.equal(inventedFigure.draft.action, result.draft.action);
+  const actualFigure = parseProjectDraft(
+    JSON.stringify({
+      ...result,
+      draft: { ...result.draft, result: "수행 시간을 30% 줄였습니다." },
+      sources: { ...result.sources, result: ["outcome"] },
+    }),
+    { ...input, outcome: "수행 시간을 30% 줄였어요." },
+  );
+  assert.equal(actualFigure.draft.result, "수행 시간을 30% 줄였습니다.");
+  const fallbackTitle = parseProjectDraft(
+    JSON.stringify({
+      ...result,
+      draft: { ...result.draft, title: "근거 없는 직책" },
+      sources: { ...result.sources, title: [] },
+    }),
+    input,
+  );
+  assert.equal(fallbackTitle.draft.title, input.about);
+  assert.deepEqual(fallbackTitle.sources.title, ["about"]);
   assert.throws(
     () =>
       parseProjectDraft(
@@ -211,6 +229,11 @@ test("API permits a first experience without saved projects and never saves AI p
   assert.equal(requests.length, 1);
   assert.equal(requests[0].response_format.type, "json_schema");
   assert.equal(requests[0].response_format.json_schema.strict, true);
+  assert.deepEqual(
+    requests[0].response_format.json_schema.schema.properties.sources.properties
+      .role.items.enum,
+    ["about", "contribution"],
+  );
   assert.equal(
     requests[0].response_format.json_schema.schema.properties.sources
       .additionalProperties,
@@ -218,11 +241,7 @@ test("API permits a first experience without saved projects and never saves AI p
   );
   const context = JSON.parse(requests[0].messages[1].content);
   assert.deepEqual(context.experience, input);
-  assert.deepEqual(Object.keys(context.profile), [
-    "type",
-    "background",
-    "role",
-  ]);
+  assert.deepEqual(Object.keys(context), ["experience"]);
   assert.ok(!JSON.stringify(context).includes("Injected name"));
   assert.deepEqual(
     JSON.parse((await store.findSession(token))!.state).projects,

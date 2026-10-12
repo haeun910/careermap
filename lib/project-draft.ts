@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Project, Workspace } from "./types";
+import type { Project } from "./types";
 
 export const experienceCategories = [
   "프로젝트",
@@ -97,25 +97,54 @@ export function parseProjectDraft(
       "AI 초안 형식을 확인하지 못했습니다. 입력은 유지됩니다. 다시 시도해 주세요.",
     );
   }
+  const repaired: DraftField[] = [];
   for (const field of draftFields) {
     const text = result.draft[field].trim();
     const sources = result.sources[field];
-    if (sources.some((id) => !input[id].trim()) || (text && !sources.length)) {
-      throw new Error(
-        "AI 초안의 답변 근거를 확인하지 못했습니다. 입력은 유지됩니다. 다시 시도해 주세요.",
-      );
+    if (!text) {
+      result.draft[field] = "";
+      result.sources[field] = [];
+      continue;
     }
-    // A model must not introduce a performance figure absent from its cited answers.
     const evidence = sources.map((id) => input[id]).join(" ");
     const numbers = (value: string): string[] =>
       value.match(/\d+(?:[.,]\d+)*/g) || [];
-    if (numbers(text).some((n) => !numbers(evidence).includes(n))) {
-      throw new Error(
-        "입력에 없는 수치가 포함되어 초안을 적용하지 않았습니다. 다시 시도해 주세요.",
-      );
-    }
-    result.draft[field] = text;
+    const unsupported =
+      !sources.length ||
+      sources.some((id) => !input[id].trim()) ||
+      numbers(text).some((n) => !numbers(evidence).includes(n));
+    if (unsupported) {
+      // Keep useful fields, but never return an unsupported model claim to the editor.
+      if (field === "title") {
+        result.draft.title = input.about.trim().split("\n")[0].slice(0, 200);
+        result.sources.title = ["about"];
+      } else {
+        result.draft[field] = "";
+        result.sources[field] = [];
+        repaired.push(field);
+      }
+    } else result.draft[field] = text;
   }
+  const questions: Record<DraftField, string> = {
+    title: "이 경험을 어떤 이름으로 기록하고 싶나요?",
+    role: "이 경험에서 본인이 직접 맡은 역할은 무엇인가요?",
+    problem: "이 활동을 시작한 배경이나 목표는 무엇이었나요?",
+    action: "본인이 직접 실행한 일 한 가지를 알려주세요.",
+    result: "실제로 확인한 변화나 결과가 있나요? 수치가 없어도 괜찮아요.",
+    learning: "이 경험에서 직접 배운 점이 있나요?",
+  };
+  const followUps = [
+    ...repaired.map((field) => ({ field, question: questions[field] })),
+    ...result.questions,
+  ];
+  const seen = new Set<DraftField>();
+  result.questions = followUps
+    .filter((q) => {
+      if (seen.has(q.field)) return false;
+      seen.add(q.field);
+      return true;
+    })
+    .slice(0, 3);
   const evidence = [
     input.about,
     input.contribution,
@@ -129,18 +158,8 @@ export function parseProjectDraft(
   );
   return result;
 }
-export function projectDraftContext(
-  profile: Workspace["profile"],
-  input: ProjectInput,
-) {
-  return {
-    profile: {
-      type: profile.type,
-      background: profile.background,
-      role: profile.role,
-    },
-    experience: input,
-  };
+export function projectDraftContext(input: ProjectInput) {
+  return { experience: input };
 }
 export function applyProjectDraft(
   project: Project,

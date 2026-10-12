@@ -53,9 +53,7 @@ export async function POST(req: NextRequest) {
         );
       if (!(await checkAiLimit(u.id)))
         return error("요청이 많습니다. 잠시 쉬었다가 다시 시도해 주세요.", 429);
-      return sessionResponse(
-        await generateProjectDraft(s.profile, parsed.data),
-      );
+      return sessionResponse(await generateProjectDraft(parsed.data));
     }
     if (
       (["company", "match"].includes(b.task) ||
