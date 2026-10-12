@@ -50,6 +50,7 @@ import {
   ShieldCheck,
   Loader2,
   BookOpen,
+  Megaphone,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import {
@@ -64,6 +65,7 @@ import {
 } from "./ui";
 import PortfolioView from "./portfolio-view";
 import PreparationGuide from "./preparation-guide";
+import { AnnouncementBoard, AnnouncementAdministration } from "./announcements";
 import SelfReflectionPanel from "./self-reflection";
 import { emptyReflection, reflectionSignature } from "@/lib/reflection";
 import { copyDocumentToSpace, copyQuestionToSpace } from "@/lib/master";
@@ -90,6 +92,8 @@ const menus: { id: View; name: string; icon: typeof Compass }[] = [
   { id: "documents", name: "이력서 · 자기소개서", icon: FileText },
   { id: "interview", name: "면접 준비", icon: MessageSquare },
   { id: "portfolio", name: "내 포트폴리오", icon: Globe },
+  { id: "notices", name: "이음 소식", icon: Megaphone },
+  { id: "admin", name: "관리자 모드", icon: ShieldCheck },
 ];
 const dates = (d: string) =>
   d
@@ -286,9 +290,11 @@ export default function WorkspaceApp() {
       <main className="boot">
         <div className="brand">
           <span className="brand-icon">
-            <Route size={23} />
+            <LinkIcon size={23} />
           </span>
-          careermap<span className="brand-dot">.</span>
+          <span className="brand-name">
+            이음<small>IEUM</small>
+          </span>
         </div>
         {loadError ? (
           <>
@@ -372,9 +378,11 @@ export default function WorkspaceApp() {
           }}
         >
           <span className="brand-icon">
-            <Route size={22} />
+            <LinkIcon size={22} />
           </span>
-          careermap<span className="brand-dot">.</span>
+          <span className="brand-name">
+            이음<small>IEUM</small>
+          </span>
         </a>
         <div className="workspace-chip">
           <span className="workspace-avatar">{s.profile.name.charAt(0)}</span>
@@ -394,22 +402,24 @@ export default function WorkspaceApp() {
         </div>
         <span className="nav-label">MY WORKSPACE</span>
         <nav>
-          {menus.map((m) => (
-            <button
-              key={m.id}
-              aria-label={m.name}
-              aria-current={view === m.id ? "page" : undefined}
-              className={`nav-item ${view === m.id ? "active" : ""}`}
-              onClick={() => go(m.id)}
-            >
-              <m.icon size={19} strokeWidth={view === m.id ? 2 : 1.7} />
-              <span>{m.name}</span>
-              {m.id === "companies" && s.companies.length > 0 && (
-                <small>{s.companies.length}</small>
-              )}
-              {m.id === "portfolio" && <span className="tiny-dot" />}
-            </button>
-          ))}
+          {menus
+            .filter((m) => m.id !== "admin" || data.admin)
+            .map((m) => (
+              <button
+                key={m.id}
+                aria-label={m.name}
+                aria-current={view === m.id ? "page" : undefined}
+                className={`nav-item ${view === m.id ? "active" : ""}`}
+                onClick={() => go(m.id)}
+              >
+                <m.icon size={19} strokeWidth={view === m.id ? 2 : 1.7} />
+                <span>{m.name}</span>
+                {m.id === "companies" && s.companies.length > 0 && (
+                  <small>{s.companies.length}</small>
+                )}
+                {m.id === "portfolio" && <span className="tiny-dot" />}
+              </button>
+            ))}
         </nav>
         <div className="sidebar-bottom">
           <div className="sidebar-tip">
@@ -516,6 +526,18 @@ export default function WorkspaceApp() {
           </div>
         </header>
         <main className={`main-content view-${view}`}>
+          {view === "notices" && <AnnouncementBoard />}
+          {view === "admin" &&
+            (data.admin ? (
+              <AnnouncementAdministration onOpenPublic={() => go("notices")} />
+            ) : (
+              <section className="panel">
+                <h1>관리자 전용 공간입니다.</h1>
+                <Button variant="secondary" onClick={() => go("dashboard")}>
+                  대시보드로 돌아가기
+                </Button>
+              </section>
+            ))}
           {view === "guide" && (
             <PreparationGuide
               state={s}
@@ -555,6 +577,7 @@ export default function WorkspaceApp() {
                   </button>
                 </div>
               )}
+              <AnnouncementBoard summary onOpen={() => go("notices")} />
               <section className="guide-entry">
                 <BookOpen size={22} />
                 <div>
@@ -972,7 +995,7 @@ export default function WorkspaceApp() {
                 <span>차곡차곡 쌓이는 나의 커리어.</span>
                 <span>
                   Made for your next chapter{" "}
-                  <span className="footer-dot">✦</span> careermap
+                  <span className="footer-dot">✦</span> 이음 · IEUM
                 </span>
               </footer>
             </>

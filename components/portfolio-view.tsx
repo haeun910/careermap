@@ -123,7 +123,7 @@ export default function PortfolioView({
           © {new Date().getFullYear()} {data.name}
         </span>
         <span>
-          Made with <strong>careermap</strong>
+          Made with <strong>이음 · IEUM</strong>
         </span>
       </footer>
     </div>

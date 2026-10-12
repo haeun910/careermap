@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { reservedAdministratorEmail } from "@/lib/admin";
 import {
   authenticated,
   error,
@@ -55,6 +56,8 @@ export async function POST(req: NextRequest) {
       );
     }
     if (action !== "register") return error("잘못된 요청입니다.");
+    if (normalized === reservedAdministratorEmail())
+      return error("관리자 계정은 기존 계정으로 로그인해 주세요.", 403);
     const existing = await emailExists(normalized);
     if (existing) return error("이미 사용 중인 이메일입니다.");
     let user = await authenticated(req);

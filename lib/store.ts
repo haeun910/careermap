@@ -6,6 +6,7 @@ import {
 } from "node:crypto";
 import { query } from "./database";
 import { sampleWorkspace } from "./seed";
+import { administratorUserId } from "./admin";
 import type { Workspace, WorkspaceResponse } from "./types";
 export { closeDatabase } from "./database";
 type UserRow = {
@@ -56,10 +57,13 @@ export async function userResponse(user: UserRow): Promise<WorkspaceResponse> {
       [user.id],
     )
   ).rows[0];
+  const administratorId = await administratorUserId();
   return {
     state: JSON.parse(user.state),
     revision: user.revision,
     guest: !user.email,
+    admin: !!user.email && user.id === administratorId,
+    adminSetupReady: !!administratorId,
     publication: p ? { slug: p.slug, updatedAt: p.updated_at } : null,
   };
 }

@@ -11,7 +11,8 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command: "npm run dev -- --port 3100",
+    command:
+      "npx tsx tests/e2e/bootstrap-admin.ts && npm run dev -- --port 3100",
     url: "http://localhost:3100",
     reuseExistingServer: false,
     timeout: 60000,
@@ -19,6 +20,8 @@ export default defineConfig({
       CAREERMAP_DATA_DIR: ".data/e2e",
       CAREERMAP_DATABASE_PROVIDER: "sqlite",
       VERCEL: "",
+      IEUM_ADMIN_EMAIL: "owner@ieum.example.invalid",
+      IEUM_ADMIN_USER_ID: "",
     },
   },
 });

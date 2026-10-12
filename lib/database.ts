@@ -10,6 +10,8 @@ const schema = [
   "CREATE TABLE IF NOT EXISTS ai_usage (user_id TEXT NOT NULL,created_at INTEGER NOT NULL)",
   "CREATE INDEX IF NOT EXISTS ai_usage_created ON ai_usage(created_at)",
   "CREATE INDEX IF NOT EXISTS ai_usage_user_created ON ai_usage(user_id,created_at)",
+  "CREATE TABLE IF NOT EXISTS site_owner (slot INTEGER PRIMARY KEY CHECK(slot=1), user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, config_hash TEXT NOT NULL)",
+  "CREATE TABLE IF NOT EXISTS announcements (id TEXT PRIMARY KEY,title TEXT NOT NULL,body TEXT NOT NULL,published INTEGER NOT NULL DEFAULT 0,pinned INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL,updated_at TEXT NOT NULL,published_at TEXT,revision INTEGER NOT NULL DEFAULT 0)",
 ];
 type Connection = { local?: DatabaseSync; remote?: Client };
 const shared = globalThis as unknown as {

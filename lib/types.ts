@@ -1,6 +1,8 @@
 export type View =
   | "dashboard"
   | "guide"
+  | "notices"
+  | "admin"
   | "self"
   | "projects"
   | "companies"
@@ -136,7 +138,20 @@ export interface WorkspaceResponse {
   state: Workspace;
   revision: number;
   guest: boolean;
+  admin?: boolean;
+  adminSetupReady?: boolean;
   publication: Publication | null;
+}
+export interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  published: boolean;
+  pinned: boolean;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt: string | null;
+  revision: number;
 }
 export type AiTask =
   | "self"
