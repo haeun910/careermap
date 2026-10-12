@@ -12,6 +12,8 @@ export function aiContext(
   answer?: string,
   question?: string,
 ) {
+  if (task === "project")
+    throw new Error("프로젝트 초안에는 짧은 경험 답변이 필요합니다.");
   if (task === "reflection") {
     const reflection = s.reflection || emptyReflection();
     return {
@@ -82,7 +84,10 @@ export function aiContext(
   const submitted = s.documents
     .filter((d) => useSubmitted && d.jobId === selectedJob?.id && d.submitted)
     .map((d) => ({ kind: d.kind, text: d.submitted!.text }));
-  const instructions: Record<Exclude<AiTask, "reflection">, string> = {
+  const instructions: Record<
+    Exclude<AiTask, "reflection" | "project">,
+    string
+  > = {
     self: "경험에 근거한 SWOT 분석을 작성하세요. 강점/보완점/기회/위협과 경험 근거, 다음 준비 과제 3개를 제공하세요. 진단이나 합격 확률은 제시하지 마세요.",
     company:
       "등록한 기업 소개와 공고만 분석하세요. 사업 맥락, 담당 업무, 필수/우대 역량, 확인되지 않은 정보, 서류 준비 포인트를 정리하세요. 제공된 URL을 직접 읽었다고 주장하지 마세요.",

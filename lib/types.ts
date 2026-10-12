@@ -154,6 +154,7 @@ export interface Announcement {
   revision: number;
 }
 export type AiTask =
+  | "project"
   | "self"
   | "reflection"
   | "company"

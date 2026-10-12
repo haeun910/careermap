@@ -26,6 +26,9 @@ test("onboarding, project, application, submission and interview answers persist
     .getByRole("button", { name: "프로젝트 추가", exact: true })
     .click();
   const project = page.getByRole("dialog");
+  await project
+    .getByRole("button", { name: "직접 작성 · 수정", exact: true })
+    .click();
   await project.getByLabel("프로젝트 · 경험 이름").fill("접근성 개선 프로젝트");
   await project.locator('[name="role"]').fill("프론트엔드 개발 담당");
   await project

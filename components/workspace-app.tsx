@@ -65,6 +65,7 @@ import {
 } from "./ui";
 import PortfolioView from "./portfolio-view";
 import PreparationGuide from "./preparation-guide";
+import ProjectForm from "./project-form";
 import { AnnouncementBoard, AnnouncementAdministration } from "./announcements";
 import SelfReflectionPanel from "./self-reflection";
 import { emptyReflection, reflectionSignature } from "@/lib/reflection";
@@ -180,6 +181,7 @@ export default function WorkspaceApp() {
   const [selfEditing, setSelfEditing] = useState(false);
   const [selfDraft, setSelfDraft] = useState("");
   const aiConsent = useRef(false);
+  const projectAiConsent = useRef(false);
   const pendingAi = useRef<(() => Promise<void>) | null>(null);
   const [activeDoc, setActiveDoc] = useState("");
   const [aiBusy, setAiBusy] = useState(false);
@@ -460,7 +462,11 @@ export default function WorkspaceApp() {
                 else
                   queue.current
                     .then(() => api("/api/auth", "POST", { action: "logout" }))
-                    .then(load)
+                    .then(() => {
+                      aiConsent.current = false;
+                      projectAiConsent.current = false;
+                      return load();
+                    })
                     .catch((e) => notify(e.message));
               }}
             >
@@ -1005,7 +1011,7 @@ export default function WorkspaceApp() {
               <PageHeading
                 eyebrow="EXPERIENCE LIBRARY"
                 title="나의 경험, 나만의 이야기"
-                description="프로젝트와 활동을 정리하고, 서류와 면접에 연결해 보세요."
+                description="짧은 답변으로 경험을 정리하고, 서류와 면접에 연결해 보세요."
                 action={
                   <Button onClick={() => openProject()}>
                     <Plus size={16} />
@@ -1825,19 +1831,25 @@ export default function WorkspaceApp() {
           project={editProject}
           profile={s.profile}
           onClose={close}
-          onSave={(p) => {
-            mutate((w) => ({
+          hasConsent={() => projectAiConsent.current}
+          onConsent={() => {
+            projectAiConsent.current = true;
+          }}
+          beforeGenerate={async () => {
+            await queue.current;
+            if (saveErrorRef.current)
+              throw new Error(
+                "먼저 저장 오류를 해결해 주세요. " + saveErrorRef.current,
+              );
+          }}
+          onSave={async (p) => {
+            await mutate((w) => ({
               ...w,
               projects: w.projects.some((x) => x.id === p.id)
                 ? w.projects.map((x) => (x.id === p.id ? p : x))
                 : [...w.projects, p],
-            }))
-              .then(() =>
-                notify(
-                  "경험을 저장했습니다. 연결된 서류와 공개본은 유지됩니다.",
-                ),
-              )
-              .catch(() => {});
+            }));
+            notify("경험을 저장했습니다. 연결된 서류와 공개본은 유지됩니다.");
             close();
           }}
         />
@@ -1996,6 +2008,7 @@ export default function WorkspaceApp() {
           onClose={close}
           onSuccess={(d) => {
             aiConsent.current = false;
+            projectAiConsent.current = false;
             pendingAi.current = null;
             ref.current = d;
             revision.current = d.revision;
@@ -2321,178 +2334,6 @@ type RunAI = (
   question?: string,
   onApply?: (text: string) => void,
 ) => Promise<void>;
-function ProjectForm({
-  project,
-  profile,
-  onSave,
-  onClose,
-}: {
-  project: Project | null;
-  profile: Workspace["profile"];
-  onSave: (p: Project) => void;
-  onClose: () => void;
-}) {
-  const role = profile.role;
-  const technical = /개발|데이터|연구|엔지니어/.test(role);
-  return (
-    <Modal
-      title={project ? "경험을 더 선명하게" : "새로운 경험 기록하기"}
-      subtitle={`${profile.type} · ${role || "직무 탐색"}에 맞춰 나의 역할과 과정을 정리해요.`}
-      wide
-      onClose={onClose}
-    >
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          const f = new FormData(e.currentTarget);
-          const get = (k: string) => String(f.get(k) || "");
-          onSave({
-            id: project?.id || uid(),
-            title: get("title"),
-            category: get("category"),
-            period: get("period"),
-            role: get("role"),
-            problem: get("problem"),
-            action: get("action"),
-            result: get("result"),
-            learning: get("learning"),
-            tags: get("tags")
-              .split(",")
-              .map((t) => t.trim())
-              .filter(Boolean),
-            link: get("link"),
-            privateNote: get("privateNote"),
-          });
-        }}
-      >
-        <Field label="프로젝트 · 경험 이름">
-          <input
-            name="title"
-            required
-            maxLength={200}
-            defaultValue={project?.title}
-            placeholder="나의 경험을 한 문장으로"
-          />
-        </Field>
-        <div className="form-grid">
-          <Field label="경험 유형">
-            <select
-              name="category"
-              defaultValue={project?.category || "프로젝트"}
-            >
-              {[
-                "프로젝트",
-                "UX/UI 디자인",
-                "서비스 기획",
-                "사이드 프로젝트",
-                "연구 · 실험",
-                "업무 경험",
-                "대외활동",
-                "학업 · 동아리",
-              ].map((x) => (
-                <option key={x}>{x}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label="기간">
-            <input
-              name="period"
-              defaultValue={project?.period}
-              placeholder="2026.03 — 2026.06"
-            />
-          </Field>
-        </div>
-        <Field label="내 역할 · 개인 기여">
-          <input
-            name="role"
-            defaultValue={project?.role}
-            placeholder={
-              technical
-                ? "예: API 설계와 성능 검증 담당"
-                : "예: 사용자 조사와 핵심 화면 설계 담당"
-            }
-          />
-        </Field>
-        <Field label="어떤 문제를 해결했나요?">
-          <textarea
-            name="problem"
-            defaultValue={project?.problem}
-            rows={3}
-            placeholder="프로젝트의 시작점과 목표를 기록해 주세요."
-          />
-        </Field>
-        <Field
-          label={
-            technical
-              ? "어떻게 설계하고 검증했나요?"
-              : "어떤 판단을 하고 실행했나요?"
-          }
-        >
-          <textarea
-            name="action"
-            defaultValue={project?.action}
-            rows={4}
-            placeholder={
-              technical
-                ? "기술 선택 이유, 실험 조건, 검증 방법 등"
-                : "조사, 우선순위, 협업과 실행 과정 등"
-            }
-          />
-        </Field>
-        <Field
-          label="결과 · 성과"
-          hint="수치가 없어도 괜찮아요. 팀 전체 성과와 나의 기여를 구분해 주세요."
-        >
-          <textarea
-            name="result"
-            defaultValue={project?.result}
-            rows={3}
-            placeholder="실제로 확인한 변화와 결과를 기록해 주세요."
-          />
-        </Field>
-        <Field label="배운 점">
-          <textarea name="learning" defaultValue={project?.learning} rows={2} />
-        </Field>
-        <div className="form-grid">
-          <Field label="역량 · 도구 태그">
-            <input
-              name="tags"
-              defaultValue={project?.tags.join(", ")}
-              placeholder="쉼표로 구분: Figma, 사용자 조사"
-            />
-          </Field>
-          <Field label="결과물 링크">
-            <input
-              name="link"
-              type="url"
-              defaultValue={project?.link}
-              placeholder="https://"
-            />
-          </Field>
-        </div>
-        <Field
-          label="비공개 메모"
-          hint="이 내용은 AI 요청이나 공개 포트폴리오에 포함되지 않습니다."
-        >
-          <textarea
-            name="privateNote"
-            defaultValue={project?.privateNote}
-            rows={2}
-          />
-        </Field>
-        <div className="modal-actions">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            취소
-          </Button>
-          <Button type="submit">
-            <Save size={16} />
-            경험 저장
-          </Button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
 function CompanyForm({
   company,
   onSave,
