@@ -9,7 +9,7 @@ import {
   History,
   RotateCcw,
 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+import Markdown from "./markdown";
 import { Button, Modal } from "./ui";
 import {
   emptyReflection,
@@ -401,9 +401,7 @@ export default function SelfReflectionPanel({
           {!historyId && r.analysis?.source === reflectionSignature(r) && (
             <section className="reflection-ai">
               <h3>나의 역량 어필 전략</h3>
-              <div className="markdown">
-                <ReactMarkdown>{r.analysis.text}</ReactMarkdown>
-              </div>
+              <Markdown text={r.analysis.text} />
             </section>
           )}
           <details className="reflection-method">

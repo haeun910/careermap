@@ -190,6 +190,15 @@ test("focused assessment has readable mobile choices, resumes the unanswered que
   expect(saved.state.reflection.analysis.projectIds).toEqual([
     before.state.projects[0].id,
   ]);
+  await page
+    .locator(".strategy-selection .experience-chips input")
+    .first()
+    .uncheck();
+  await expect(page.locator(".reflection-ai")).toHaveCount(0);
+  const unchanged = await (await page.request.get("/api/workspace")).json();
+  expect(unchanged.state.reflection.analysis.projectIds).toEqual([
+    before.state.projects[0].id,
+  ]);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,

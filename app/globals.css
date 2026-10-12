@@ -5132,3 +5132,18 @@ small {
 .resume-sheet-entry > div span { color: #89948c; font-size: 11px; }
 .resume-sheet-detail { color: #65806e; margin: 4px 0 7px; }
 @media print { .document-builder,.editor-toolbar,.legacy-document,.material-copy,.master-hint,.form-error { display: none !important; } .resume-sheet-section h2 { margin: 15px 0 10px; } .print-sheet .resume-sheet header h1 { margin: 0 0 6px; font-size: 26px; } .print-sheet .resume-sheet-section h2 { margin: 15px 0 10px; font-size: 13px; } }
+.markdown { min-width: 0; word-break: keep-all; overflow-wrap: anywhere; }
+.markdown > :first-child { margin-top: 0; }
+.markdown-table-scroll { max-width: 100%; overflow-x: auto; margin: 18px 0; border: 1px solid #dde7df; border-radius: 10px; background: white; }
+.markdown table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12px; line-height: 1.9; }
+.markdown th { color: #355c47; background: #eef4ef; font-weight: 650; }
+.markdown th, .markdown td { padding: 13px 15px; border-bottom: 1px solid #e4ebe6; vertical-align: top; min-width: 120px; overflow-wrap: anywhere; }
+.markdown td + td,.markdown th + th { border-left: 1px solid #e8eee9; }
+.markdown tbody tr:last-child td { border-bottom: 0; }
+.markdown tbody tr:nth-child(even) { background: #fafcfb; }
+.markdown td p { margin: 0; }
+.markdown h4 { font-size: 13px; color: #41664e; margin: 17px 0 8px; }
+.markdown .task-list-item { list-style-type: none; }
+.markdown .task-list-item input[type=checkbox] { width: 13px; height: 13px; padding: 0; margin: 0 7px 0 -18px; accent-color: #568566; }
+@media(max-width:650px) { .markdown { font-size: 13px; line-height: 1.95; } .markdown th,.markdown td { min-width: 105px; padding: 10px 12px; } }
+@media print { .document-editor > .resume-preview { display: none !important; } }

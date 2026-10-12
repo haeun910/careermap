@@ -11,7 +11,7 @@ import {
   RefreshCw,
   ShieldCheck,
 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+import Markdown from "./markdown";
 import { Button, Modal, Field, Spinner, Empty } from "./ui";
 import { safeUrl } from "@/lib/types";
 import type { Announcement } from "@/lib/types";
@@ -38,21 +38,7 @@ const date = (value: string) =>
     day: "numeric",
   });
 function Content({ text }: { text: string }) {
-  return (
-    <div className="markdown notice-content">
-      <ReactMarkdown
-        components={{
-          a: ({ href, children }) => (
-            <a href={safeUrl(href || "")} target="_blank" rel="noreferrer">
-              {children}
-            </a>
-          ),
-        }}
-      >
-        {text}
-      </ReactMarkdown>
-    </div>
-  );
+  return <Markdown text={text} className="notice-content" />;
 }
 export function AnnouncementBoard({
   summary = false,

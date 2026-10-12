@@ -107,6 +107,9 @@ test("onboarding, project, application, submission and interview answers persist
     .getByRole("button", { name: "제출본 확정", exact: true })
     .click();
   await expect(page.getByText("제출본이 확정되었습니다.")).toBeVisible();
+  await expect(page.locator(".document-editor .resume-preview")).toContainText(
+    "접근성 개선 프로젝트",
+  );
   await nav(page, "프로젝트 · 경험").click();
   await page.getByRole("button", { name: "편집", exact: true }).click();
   await page

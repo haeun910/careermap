@@ -52,7 +52,7 @@ import {
   BookOpen,
   Megaphone,
 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+import Markdown from "./markdown";
 import {
   Button,
   Modal,
@@ -138,23 +138,6 @@ async function api<T>(
   const b = await r.json();
   if (!r.ok) throw new Error(b.error || "요청을 완료하지 못했습니다.");
   return b;
-}
-function Markdown({ text }: { text: string }) {
-  return (
-    <div className="markdown">
-      <ReactMarkdown
-        components={{
-          a: ({ href, children }) => (
-            <a href={safeUrl(href || "")} target="_blank" rel="noreferrer">
-              {children}
-            </a>
-          ),
-        }}
-      >
-        {text}
-      </ReactMarkdown>
-    </div>
-  );
 }
 export default function WorkspaceApp() {
   const [data, setData] = useState<WorkspaceResponse | null>(null);
@@ -2903,7 +2886,13 @@ function DocumentWorkspace({
                     수정본 만들기
                   </Button>
                 </div>
-                <Markdown text={doc.submitted.text} />
+                {doc.submitted.resume ? (
+                  <section className="resume-preview">
+                    <ResumeSheet value={doc.submitted.resume} />
+                  </section>
+                ) : (
+                  <Markdown text={doc.submitted.text} />
+                )}
                 <div className="button-row">
                   <Button
                     variant="secondary"

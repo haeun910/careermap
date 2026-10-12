@@ -221,7 +221,7 @@ export default function AssessmentWorkspace() {
     r.analysis?.source === reflectionSignature(r) &&
     (!r.analysis.experienceSource ||
       r.analysis.experienceSource ===
-        experienceSignature(data.state.projects, r.analysis.projectIds || []));
+        experienceSignature(data.state.projects, selected));
   const selection = (
     <div className="strategy-selection">
       <h3>
